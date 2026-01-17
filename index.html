@@ -80,9 +80,9 @@
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="antialiased">
+<body class="antialiased h-screen flex flex-col">
 
-    <!-- DRILL-DOWN POPUP -->
+    <!-- DRILL-DOWN POPUP (SPLIT VIEW) -->
     <div id="taskListModal" class="modal-overlay" onclick="closeAllModals(event)">
         <div class="glass-card w-full max-w-5xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border-none" onclick="event.stopPropagation()">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -239,16 +239,23 @@
             </div>
         </section>
 
+        <!-- CLIENT VIEW -->
         <section id="view-client" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6 text-sm"></section>
+
+        <!-- ATTENTION VIEW (Unassigned) -->
         <section id="view-unassigned" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-red-600 tracking-[0.3em] italic text-center">Live Escalations</h3><span id="unassignedCounter" class="text-[10px] font-black bg-red-100 text-red-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="unassignedTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
+        
+        <!-- DEADLINES VIEW -->
         <section id="view-no-deadline" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-blue-600 tracking-widest text-center">Unscheduled Commitments</h3><span id="noDeadlineCounter" class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="noDeadlineTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
+        
+        <!-- BACKLOG VIEW -->
         <section id="view-backlog" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Project Backlog / Roadmap</h3><span id="backlogCounter" class="text-[10px] font-black bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="backlogTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
     </main>
 
     <script>
         Chart.register(ChartDataLabels);
         window.tasks = [];
-        window.currentFilteredTasks = []; // Holds the result of Search + Filter Bars
+        window.currentFilteredTasks = [];
         let charts = {};
         window.currentTab = 'mgmt';
         const DEV_CAPACITY = 32;
@@ -269,33 +276,44 @@
                 const res = await fetch("https://product-team-dashboard.fatin-rasyidah.workers.dev/");
                 const json = await res.json();
                 
-                // FLATTEN TASKS FOR MULTI-ASSIGNEE (Ensures both people see the task in their loading/lists)
                 let rawTasks = [];
                 json.tasks.forEach(t => {
                     let clientName = "Internal";
-                    const cf = t.custom_fields?.find(f => f.name.toLowerCase().includes('client') || f.name.toLowerCase().includes('account'));
+                    const cf = t.custom_fields?.find(f => 
+                        f.name.toLowerCase().includes('client') || 
+                        f.name.toLowerCase().includes('account') ||
+                        f.name.toLowerCase().includes('customer')
+                    );
+                    
                     if (cf?.value !== undefined) {
                         if (cf.type_config?.options) {
-                            const opt = cf.type_config.options.find(o => String(o.id) === String(cf.value) || String(o.orderindex) === String(cf.value));
+                            const opt = cf.type_config.options.find(o => 
+                                String(o.id) === String(cf.value) || 
+                                String(o.orderindex) === String(cf.value)
+                            );
                             clientName = opt ? (opt.label || opt.name) : cf.value;
-                        } else clientName = Array.isArray(cf.value) ? cf.value.join(', ') : cf.value;
+                        } else {
+                            clientName = Array.isArray(cf.value) ? cf.value.join(', ') : cf.value;
+                        }
                     }
                     if ((!clientName || clientName === "Internal") && t.tags && t.tags.length > 0) {
                         clientName = t.tags[0].name;
                     }
 
                     const rStatus = t.status?.status || "todo";
-                    const allOwners = t.assignees && t.assignees.length > 0 ? t.assignees.map(a => a.username).join(", ") : "Unassigned";
+                    const sKey = rStatus.toLowerCase().replace(/[\s-]/g, '');
+                    
+                    const allOwners = t.assigneeDisplay || t.allTeamAssignees || (t.assignees ? t.assignees.map(x => x.username).join(", ") : "Unassigned");
                     
                     const taskDetails = {
                         id: t.id, name: t.name, url: t.url, client: clientName, 
-                        status: rStatus, statusKey: rStatus.toLowerCase().replace(/[\s-]/g, ''), 
-                        sprint: t.list?.name || "Global",
+                        status: rStatus, statusKey: sKey, sprint: t.list?.name || "Global",
                         hours: t.time_estimate ? Math.round(t.time_estimate / 3600000 * 10) / 10 : 0,
-                        isClosed: (rStatus.toLowerCase() === 'deployed' || rStatus.toLowerCase() === 'closed' || t.status?.type === 'closed'),
+                        isClosed: (sKey === 'deployed' || sKey === 'closed' || t.status?.type === 'closed'),
                         dueDate: t.due_date ? new Date(parseInt(t.due_date)) : null,
                         priority: t.priority?.priority || "None",
-                        allAssignees: allOwners // Store full list for popup/detail
+                        allAssignees: allOwners,
+                        isEscalation: /support|escalation/i.test(t.list?.name)
                     };
 
                     const teamMembers = (t.assignees && t.assignees.length > 0) ? t.assignees : [{ username: "Unassigned" }];
@@ -305,9 +323,11 @@
                 });
 
                 window.tasks = rawTasks;
-                populateFilters();
-                renderView(window.currentTab);
+                document.getElementById('syncStatus').innerText = `UPDATED: ${new Date().toLocaleTimeString()}`;
+                document.getElementById('autoSyncLabel').classList.remove('hidden');
                 resetTimer();
+                populateFilters();
+                renderView(window.currentTab); 
             } catch (err) { console.error(err); }
             finally { isSyncing = false; document.getElementById('loadingOverlay').classList.add('hidden'); }
         }
@@ -350,11 +370,7 @@
                 const cfg = configs[id];
                 const container = document.getElementById(id);
                 if (container) {
-                    container.innerHTML = cfg.items.map(item => `
-                        <div class="filter-item" onclick="toggleSelection(event, '${cfg.key}', '${item.replace(/'/g, "\\'")}', '${cfg.label}', '${cfg.title}')">
-                            <input type="checkbox" ${activeFilters[cfg.key].includes(item) ? 'checked' : ''}>
-                            <span class="truncate font-semibold">${item}</span>
-                        </div>`).join('');
+                    container.innerHTML = cfg.items.map(item => `<div class="filter-item" onclick="toggleSelection(event, '${cfg.key}', '${item.replace(/'/g, "\\'")}', '${cfg.label}', '${cfg.title}')"><input type="checkbox" ${activeFilters[cfg.key].includes(item) ? 'checked' : ''}><span class="truncate font-semibold">${item}</span></div>`).join('');
                 }
             });
         }
@@ -370,7 +386,10 @@
 
         function resetFilters() { 
             activeFilters = { clients: [], assignees: [], statuses: [], sprints: [] }; 
-            ['labelClient', 'labelAssignee', 'labelSprint', 'labelStatus'].forEach(id => document.getElementById(id).innerText = `All ${id.replace('label', '')}s`);
+            ['labelClient', 'labelAssignee', 'labelSprint', 'labelStatus'].forEach(id => {
+                const label = id.replace('label', '');
+                document.getElementById(id).innerText = `All ${label}s`;
+            });
             populateFilters(); 
             renderView(window.currentTab); 
         }
@@ -397,7 +416,7 @@
             
             if (view === 'mgmt') {
                 document.getElementById('taskCounter').innerText = `${window.currentFilteredTasks.length} items`;
-                document.getElementById('mgmtTable').innerHTML = window.currentFilteredTasks.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight">${t.name}</td><td class="px-6 py-3"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium">${t.assignee}</td></tr>`).join('');
+                document.getElementById('mgmtTable').innerHTML = window.currentFilteredTasks.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight">${t.name}</td><td class="px-6 py-3"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs">${t.assignee}</td></tr>`).join('');
                 renderCharts(window.currentFilteredTasks);
             } else if (view === 'plan') renderPlanning(window.currentFilteredTasks);
             else if (view === 'client') renderClientProgress(window.currentFilteredTasks);
@@ -431,7 +450,6 @@
         }
 
         function renderModalChart(type, initial) {
-            // Uses currentFilteredTasks as the base pool to respect active UI filters
             const dataPool = window.currentFilteredTasks;
             const set = dataPool.filter(t => (type === 'client' ? t.client === initial : (type === 'assignee' ? t.assignee === initial : true)));
             const map = set.reduce((a, t) => { const k = t.status; a[k] = (a[k]||0)+1; return a; }, {});
@@ -458,7 +476,6 @@
         }
 
         function refreshDrillDownList(type, val, sub = null) {
-            // Uses currentFilteredTasks as the base pool to respect active UI filters
             const dataPool = window.currentFilteredTasks;
             let f = [];
             const displayVal = sub || val;
@@ -466,17 +483,16 @@
             else if (type === 'assignee') f = dataPool.filter(t => t.assignee === val && (sub ? t.status === sub : true));
             else f = dataPool.filter(t => t.status === displayVal);
             
-            // Deduplicate unique task IDs for display in the table
             const uniqueTasks = Array.from(new Map(f.map(t => [t.id, t])).values());
 
             document.getElementById('listModalTitle').innerText = (type === 'client' || type === 'assignee') ? `${val} ${sub ? ' - ' + sub : ''}` : displayVal;
             document.getElementById('listModalCounter').innerText = `${uniqueTasks.length} unique items`;
             document.getElementById('listModalTableBody').innerHTML = uniqueTasks.map(t => `
                 <tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')">
-                    <td class="px-6 py-4"><div class="font-black text-slate-800 tracking-tight text-xs">${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td>
+                    <td class="px-6 py-4 font-bold text-slate-800 tracking-tight text-xs"><div>${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td>
                     <td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td>
-                    <td class="px-6 py-4 text-slate-500 font-medium text-[9px] uppercase tracking-widest">${t.allAssignees}</td>
-                    <td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td>
+                    <td class="px-6 py-4 text-slate-500 font-medium text-xs">${t.allAssignees}</td>
+                    <td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td>
                 </tr>`).join('');
         }
 
@@ -484,34 +500,38 @@
             const t = window.tasks.find(x => x.id === id); if (!t) return;
             document.getElementById('detailContent').innerHTML = `
                 <div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div><h3 class="text-2xl font-black text-slate-900 leading-tight tracking-tighter">${t.name}</h3><div class="text-[10px] font-black text-purple-600 uppercase mt-2 tracking-[0.3em]">Requirement Data Link</div></div>
-                    <div class="grid grid-cols-2 gap-6 py-6 border-y border-slate-100 my-6">
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Status</p><span class="st-badge st-${t.statusKey}">${t.status}</span></div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Owner(s)</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.allAssignees}</p></div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Sprint</p><p class="text-sm font-bold text-slate-600 tracking-tight">${t.sprint}</p></div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Account</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.client}</p></div>
-                        <div class="col-span-2"><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Deployment Date</p><p class="text-lg font-black text-slate-900 tracking-tighter">${t.dueDate ? t.dueDate.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric'}) : 'NOT SCHEDULED'}</p></div>
+                    <h3 class="text-2xl font-black text-slate-900 leading-tight tracking-tighter text-xs">${t.name}</h3>
+                    <div class="grid grid-cols-2 gap-6 py-6 border-y border-slate-100 my-6 text-xs">
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Status</p><span class="st-badge st-${t.statusKey}">${t.status}</span></div>
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Owner(s)</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.allAssignees}</p></div>
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Sprint</p><p class="text-sm font-bold text-slate-600 tracking-tight">${t.sprint}</p></div>
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Account</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.client}</p></div>
                     </div>
-                    <div class="flex justify-between items-center pt-2">
-                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Effort: <span class="text-slate-900 text-sm ml-2">${t.hours}h</span></div>
-                        <a href="${t.url}" target="_blank" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-purple-600 transition-all shadow-md active:scale-95">Open In ClickUp <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" stroke-width="2.5"></path></svg></a>
-                    </div>
+                    <div class="flex justify-between items-center"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Score: <span class="text-slate-900 text-sm ml-2">${t.hours}h</span></span><a href="${t.url}" target="_blank" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-600 shadow-md">Open Task</a></div>
                 </div>`;
             document.getElementById('taskDetailModal').classList.add('show');
         }
 
-        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-        function closeAllModals(e) { if(e.target.classList.contains('modal-overlay')) document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show')); }
-        window.addEventListener('click', () => document.querySelectorAll('.filter-content').forEach(c => c.classList.remove('show')));
-
         function renderPlanning(data) {
             const total = data.reduce((s, t) => s + t.hours, 0);
-            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div></div>`;
+            
+            // DYNAMIC CAPACITY LOGIC
+            // If "All Sprints" (activeFilters.sprints empty), count all unique sprints found in window.tasks
+            let sprintCount = activeFilters.sprints.length;
+            if (sprintCount === 0) {
+                const availableSprints = [...new Set(window.tasks.filter(t => !t.isEscalation).map(t => t.sprint))];
+                sprintCount = availableSprints.length || 1;
+            }
+            
+            const currentLimit = sprintCount * DEV_CAPACITY;
+
+            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div><p class="text-[10px] font-black text-purple-600 uppercase mt-1">Global Limit: ${currentLimit}H (${sprintCount} Sprints x 32H)</p></div>`;
+            
             const devHrs = data.reduce((acc, t) => { acc[t.assignee] = (acc[t.assignee] || 0) + t.hours; return acc; }, {});
             const labels = Object.keys(devHrs);
             if(charts.plan) charts.plan.destroy();
-            charts.plan = new Chart(document.getElementById('chartCapacity'), { type: 'bar', data: { labels, datasets: [{ label: 'Used', data: Object.values(devHrs), backgroundColor: '#7c3aed', borderRadius: 8, barThickness: 24 }, { label: 'Limit', data: labels.map(() => DEV_CAPACITY), backgroundColor: '#f1f5f9', borderRadius: 8, barThickness: 24 }] }, options: { maintainAspectRatio: false, indexAxis: 'y', onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts.plan.data.labels[i[0].index], 'assignee'); }, plugins: { datalabels: { display: false }, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } } } });
-            document.getElementById('capacityList').innerHTML = labels.map(n => { const u = devHrs[n], p = Math.min((u/DEV_CAPACITY)*100, 100); return `<div class="space-y-2 p-2 rounded-xl hover:bg-white transition-all"><div class="flex justify-between text-[11px] font-black uppercase tracking-widest"><span>${n}</span><span class="${u > DEV_CAPACITY ? 'text-red-600' : 'text-slate-600'}">${u.toFixed(1)}h / ${DEV_CAPACITY}h</span></div><div class="progress-bar"><div class="progress-fill ${u > DEV_CAPACITY ? 'bg-red-500' : 'bg-purple-600'}" style="width: ${p}%"></div></div></div>`; }).join('');
+            charts.plan = new Chart(document.getElementById('chartCapacity'), { type: 'bar', data: { labels, datasets: [{ label: 'Used', data: Object.values(devHrs), backgroundColor: '#7c3aed', borderRadius: 8, barThickness: 24 }, { label: 'Limit', data: labels.map(() => currentLimit), backgroundColor: '#f1f5f9', borderRadius: 8, barThickness: 24 }] }, options: { maintainAspectRatio: false, indexAxis: 'y', onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts.plan.data.labels[i[0].index], 'assignee'); }, plugins: { datalabels: { display: false }, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } } } });
+            document.getElementById('capacityList').innerHTML = labels.map(n => { const u = devHrs[n], p = Math.min((u/currentLimit)*100, 100); return `<div class="space-y-2 p-2 rounded-xl hover:bg-white transition-all"><div class="flex justify-between text-[11px] font-black uppercase tracking-widest text-xs"><span>${n}</span><span class="${u > currentLimit ? 'text-red-600 font-black' : 'text-slate-600'}">${u.toFixed(1)}h / ${currentLimit}h</span></div><div class="progress-bar"><div class="progress-fill ${u > currentLimit ? 'bg-red-500' : 'bg-purple-600'}" style="width: ${p}%"></div></div></div>`; }).join('');
         }
 
         function renderClientProgress(data) {
@@ -521,7 +541,7 @@
                 const ct = uniqueById.filter(t => t.client === c);
                 const done = ct.filter(t => t.isClosed).length;
                 const prog = ct.length > 0 ? Math.round((done / ct.length) * 100) : 0;
-                return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client')"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col"><span class="text-slate-900 text-sm">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right"><span class="text-slate-900 text-sm">${ct.length}</span><span>Volume</span></div></div></div>`;
+                return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client')"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col text-xs"><span class="text-slate-900 text-sm font-bold">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right text-xs"><span class="text-slate-900 text-sm font-bold">${ct.length}</span><span>Volume</span></div></div></div>`;
             }).join('');
         }
 
@@ -529,23 +549,26 @@
             const f = data.filter(t => t.assignee === "Unassigned");
             const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('unassignedCounter').innerText = `${unique.length} items`;
-            document.getElementById('unassignedTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-800 flex items-center gap-3"><div>${t.name}</div> <span class="bg-red-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest alert-pulse shadow-sm">ATTENTION</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 font-black uppercase text-[9px] text-red-600 tracking-widest">${t.priority}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Allocation Optimized</td></tr>';
+            document.getElementById('unassignedTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-800 flex items-center gap-3 text-xs"><div>${t.name}</div> <span class="bg-red-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest alert-pulse shadow-sm uppercase">Support</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 font-black uppercase text-[9px] text-red-600 tracking-widest text-xs">${t.priority}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Allocation Optimized</td></tr>';
         }
 
         function renderNoDeadline(data) {
             const f = data.filter(t => !t.dueDate);
             const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('noDeadlineCounter').innerText = `${unique.length} items`;
-            document.getElementById('noDeadlineTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-900 tracking-tight">${t.name}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.allAssignees}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Schedule Complete</td></tr>';
+            document.getElementById('noDeadlineTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-900 tracking-tight text-xs">${t.name}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.allAssignees}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Schedule Complete</td></tr>';
         }
 
         function renderBacklog(data) {
             const f = data.filter(t => t.sprint.toLowerCase().includes('backlog') || t.status.toLowerCase().includes('backlog'));
             const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('backlogCounter').innerText = `${unique.length} items`;
-            document.getElementById('backlogTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-black text-slate-800">${t.name}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-3"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Backlog Clear</td></tr>';
+            document.getElementById('backlogTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-black text-slate-800 text-xs">${t.name}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Backlog Clear</td></tr>';
         }
 
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+        function closeAllModals(e) { if(e.target.classList.contains('modal-overlay')) document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show')); }
+        window.onclick = (e) => { if(!e.target.closest('.filter-dropdown')) document.querySelectorAll('.filter-content').forEach(c => c.classList.remove('show')); };
         window.onload = () => fetchRealData(true);
     </script>
 </body>
