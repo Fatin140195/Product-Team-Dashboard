@@ -59,16 +59,16 @@
         .filter-item:hover { background: #f1f5f9; }
         .filter-item input { margin-right: 10px; accent-color: #7c3aed; width: 16px; height: 16px; pointer-events: none; border-radius: 4px; }
 
-        .st-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 6px; display: inline-block; white-space: nowrap; letter-spacing: 0.05em; }
-        .st-deployed { background: #00A884; color: white; }
-        .st-pendingdeployment, .st-pendingdeployement { background: #D33131; color: white; }
-        .st-test { background: #00B8D9; color: white; }
-        .st-inreview { background: #6E5DC6; color: white; }
+        .st-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 6px; display: inline-block; white-space: nowrap; letter-spacing: 0.05em; color: white; }
+        .st-deployed { background: #00A884; }
+        .st-pendingdeployment, .st-pendingdeployement { background: #D33131; }
+        .st-test { background: #00B8D9; }
+        .st-inreview { background: #6E5DC6; }
         .st-rework { background: #FFCC00; color: #4b3f00; }
-        .st-inprogress { background: #0084FF; color: white; }
-        .st-kiv { background: #FF7A00; color: white; }
+        .st-inprogress { background: #0084FF; }
+        .st-kiv { background: #FF7A00; }
         .st-todo { background: #D9D9D9; color: #475569; }
-        .st-closed { background: #2ecc71; color: white; }
+        .st-closed { background: #2ecc71; }
         
         .progress-bar { height: 8px; border-radius: 4px; background: #f1f5f9; overflow: hidden; }
         .progress-fill { height: 100%; transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -82,7 +82,7 @@
 </head>
 <body class="antialiased">
 
-    <!-- DRILL-DOWN POPUP (SPLIT VIEW) -->
+    <!-- DRILL-DOWN POPUP -->
     <div id="taskListModal" class="modal-overlay" onclick="closeAllModals(event)">
         <div class="glass-card w-full max-w-5xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border-none" onclick="event.stopPropagation()">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -103,7 +103,12 @@
                 <div class="w-2/3 flex flex-col bg-white overflow-y-auto text-xs">
                     <table class="w-full text-left border-collapse">
                         <thead class="bg-white text-slate-400 sticky top-0 z-10 border-b border-slate-50">
-                            <tr><th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Requirement</th><th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Sprint</th><th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]" id="listModalCol3">Info</th></tr>
+                            <tr>
+                                <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Requirement</th>
+                                <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Sprint</th>
+                                <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Owner(s)</th>
+                                <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]" id="listModalCol3">Info</th>
+                            </tr>
                         </thead>
                         <tbody id="listModalTableBody" class="divide-y divide-slate-50"></tbody>
                     </table>
@@ -234,23 +239,16 @@
             </div>
         </section>
 
-        <!-- CLIENT VIEW -->
         <section id="view-client" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6 text-sm"></section>
-
-        <!-- ATTENTION VIEW (Unassigned) -->
-        <section id="view-unassigned" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-red-600 tracking-[0.3em] italic text-center">Unassigned Attention List</h3><span id="unassignedCounter" class="text-[10px] font-black bg-red-100 text-red-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="unassignedTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
-        
-        <!-- DEADLINES VIEW -->
-        <section id="view-no-deadline" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-blue-600 tracking-widest text-center text-center">Unscheduled Commitments</h3><span id="noDeadlineCounter" class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="noDeadlineTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
-        
-        <!-- BACKLOG VIEW -->
-        <section id="view-backlog" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center text-center text-center text-center text-center">Project Backlog / Roadmap</h3><span id="backlogCounter" class="text-[10px] font-black bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="backlogTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
+        <section id="view-unassigned" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-red-600 tracking-[0.3em] italic text-center">Live Escalations</h3><span id="unassignedCounter" class="text-[10px] font-black bg-red-100 text-red-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="unassignedTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
+        <section id="view-no-deadline" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-blue-600 tracking-widest text-center">Unscheduled Commitments</h3><span id="noDeadlineCounter" class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="noDeadlineTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
+        <section id="view-backlog" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Project Backlog / Roadmap</h3><span id="backlogCounter" class="text-[10px] font-black bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="backlogTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
     </main>
 
     <script>
         Chart.register(ChartDataLabels);
         window.tasks = [];
-        window.currentFilteredTasks = [];
+        window.currentFilteredTasks = []; // Holds the result of Search + Filter Bars
         let charts = {};
         window.currentTab = 'mgmt';
         const DEV_CAPACITY = 32;
@@ -270,46 +268,46 @@
             try {
                 const res = await fetch("https://product-team-dashboard.fatin-rasyidah.workers.dev/");
                 const json = await res.json();
-                window.tasks = json.tasks.map(t => {
+                
+                // FLATTEN TASKS FOR MULTI-ASSIGNEE (Ensures both people see the task in their loading/lists)
+                let rawTasks = [];
+                json.tasks.forEach(t => {
                     let clientName = "Internal";
-                    const cf = t.custom_fields?.find(f => 
-                        f.name.toLowerCase().includes('client') || 
-                        f.name.toLowerCase().includes('account') ||
-                        f.name.toLowerCase().includes('customer')
-                    );
-                    
+                    const cf = t.custom_fields?.find(f => f.name.toLowerCase().includes('client') || f.name.toLowerCase().includes('account'));
                     if (cf?.value !== undefined) {
                         if (cf.type_config?.options) {
-                            const opt = cf.type_config.options.find(o => 
-                                String(o.id) === String(cf.value) || 
-                                String(o.orderindex) === String(cf.value)
-                            );
+                            const opt = cf.type_config.options.find(o => String(o.id) === String(cf.value) || String(o.orderindex) === String(cf.value));
                             clientName = opt ? (opt.label || opt.name) : cf.value;
-                        } else {
-                            clientName = Array.isArray(cf.value) ? cf.value.join(', ') : cf.value;
-                        }
+                        } else clientName = Array.isArray(cf.value) ? cf.value.join(', ') : cf.value;
                     }
-                    
                     if ((!clientName || clientName === "Internal") && t.tags && t.tags.length > 0) {
                         clientName = t.tags[0].name;
                     }
 
                     const rStatus = t.status?.status || "todo";
-                    const sKey = rStatus.toLowerCase().replace(/[\s-]/g, '');
-                    return {
-                        id: t.id, name: t.name, url: t.url, client: clientName, assignee: t.assignees?.[0]?.username || "Unassigned",
-                        status: rStatus, statusKey: sKey, sprint: t.list?.name || "Global",
+                    const allOwners = t.assignees && t.assignees.length > 0 ? t.assignees.map(a => a.username).join(", ") : "Unassigned";
+                    
+                    const taskDetails = {
+                        id: t.id, name: t.name, url: t.url, client: clientName, 
+                        status: rStatus, statusKey: rStatus.toLowerCase().replace(/[\s-]/g, ''), 
+                        sprint: t.list?.name || "Global",
                         hours: t.time_estimate ? Math.round(t.time_estimate / 3600000 * 10) / 10 : 0,
-                        isClosed: (sKey === 'deployed' || sKey === 'closed' || t.status?.type === 'closed'),
+                        isClosed: (rStatus.toLowerCase() === 'deployed' || rStatus.toLowerCase() === 'closed' || t.status?.type === 'closed'),
                         dueDate: t.due_date ? new Date(parseInt(t.due_date)) : null,
-                        priority: t.priority?.priority || "None"
+                        priority: t.priority?.priority || "None",
+                        allAssignees: allOwners // Store full list for popup/detail
                     };
+
+                    const teamMembers = (t.assignees && t.assignees.length > 0) ? t.assignees : [{ username: "Unassigned" }];
+                    teamMembers.forEach(a => {
+                        rawTasks.push({ ...taskDetails, assignee: a.username });
+                    });
                 });
-                document.getElementById('syncStatus').innerText = `UPDATED: ${new Date().toLocaleTimeString()}`;
-                document.getElementById('autoSyncLabel').classList.remove('hidden');
-                resetTimer();
+
+                window.tasks = rawTasks;
                 populateFilters();
-                renderView(window.currentTab); 
+                renderView(window.currentTab);
+                resetTimer();
             } catch (err) { console.error(err); }
             finally { isSyncing = false; document.getElementById('loadingOverlay').classList.add('hidden'); }
         }
@@ -352,7 +350,11 @@
                 const cfg = configs[id];
                 const container = document.getElementById(id);
                 if (container) {
-                    container.innerHTML = cfg.items.map(item => `<div class="filter-item" onclick="toggleSelection(event, '${cfg.key}', '${item.replace(/'/g, "\\'")}', '${cfg.label}', '${cfg.title}')"><input type="checkbox" ${activeFilters[cfg.key].includes(item) ? 'checked' : ''}><span class="truncate font-semibold">${item}</span></div>`).join('');
+                    container.innerHTML = cfg.items.map(item => `
+                        <div class="filter-item" onclick="toggleSelection(event, '${cfg.key}', '${item.replace(/'/g, "\\'")}', '${cfg.label}', '${cfg.title}')">
+                            <input type="checkbox" ${activeFilters[cfg.key].includes(item) ? 'checked' : ''}>
+                            <span class="truncate font-semibold">${item}</span>
+                        </div>`).join('');
                 }
             });
         }
@@ -368,10 +370,7 @@
 
         function resetFilters() { 
             activeFilters = { clients: [], assignees: [], statuses: [], sprints: [] }; 
-            ['labelClient', 'labelAssignee', 'labelSprint', 'labelStatus'].forEach(id => {
-                const label = id.replace('label', '');
-                document.getElementById(id).innerText = `All ${label}s`;
-            });
+            ['labelClient', 'labelAssignee', 'labelSprint', 'labelStatus'].forEach(id => document.getElementById(id).innerText = `All ${id.replace('label', '')}s`);
             populateFilters(); 
             renderView(window.currentTab); 
         }
@@ -387,7 +386,14 @@
 
         function renderView(view) {
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
-            window.currentFilteredTasks = window.tasks.filter(t => (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && (activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint)) && (activeFilters.statuses.length === 0 || activeFilters.statuses.includes(t.status)) && (t.name.toLowerCase().includes(search)));
+            
+            window.currentFilteredTasks = window.tasks.filter(t => 
+                (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && 
+                (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && 
+                (activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint)) && 
+                (activeFilters.statuses.length === 0 || activeFilters.statuses.includes(t.status)) && 
+                (t.name.toLowerCase().includes(search))
+            );
             
             if (view === 'mgmt') {
                 document.getElementById('taskCounter').innerText = `${window.currentFilteredTasks.length} items`;
@@ -425,7 +431,9 @@
         }
 
         function renderModalChart(type, initial) {
-            const set = window.tasks.filter(t => (type === 'client' ? t.client === initial : (type === 'assignee' ? t.assignee === initial : true)));
+            // Uses currentFilteredTasks as the base pool to respect active UI filters
+            const dataPool = window.currentFilteredTasks;
+            const set = dataPool.filter(t => (type === 'client' ? t.client === initial : (type === 'assignee' ? t.assignee === initial : true)));
             const map = set.reduce((a, t) => { const k = t.status; a[k] = (a[k]||0)+1; return a; }, {});
             if (charts.modal) charts.modal.destroy();
             charts.modal = new Chart(document.getElementById('modalChart'), { 
@@ -450,14 +458,26 @@
         }
 
         function refreshDrillDownList(type, val, sub = null) {
+            // Uses currentFilteredTasks as the base pool to respect active UI filters
+            const dataPool = window.currentFilteredTasks;
             let f = [];
             const displayVal = sub || val;
-            if (type === 'client') f = window.tasks.filter(t => t.client === val && (sub ? t.status === sub : true));
-            else if (type === 'assignee') f = window.tasks.filter(t => t.assignee === val && (sub ? t.status === sub : true));
-            else f = window.tasks.filter(t => t.status === displayVal);
+            if (type === 'client') f = dataPool.filter(t => t.client === val && (sub ? t.status === sub : true));
+            else if (type === 'assignee') f = dataPool.filter(t => t.assignee === val && (sub ? t.status === sub : true));
+            else f = dataPool.filter(t => t.status === displayVal);
+            
+            // Deduplicate unique task IDs for display in the table
+            const uniqueTasks = Array.from(new Map(f.map(t => [t.id, t])).values());
+
             document.getElementById('listModalTitle').innerText = (type === 'client' || type === 'assignee') ? `${val} ${sub ? ' - ' + sub : ''}` : displayVal;
-            document.getElementById('listModalCounter').innerText = `${f.length} items`;
-            document.getElementById('listModalTableBody').innerHTML = f.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4"><div class="font-black text-slate-800 tracking-tight text-xs">${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('');
+            document.getElementById('listModalCounter').innerText = `${uniqueTasks.length} unique items`;
+            document.getElementById('listModalTableBody').innerHTML = uniqueTasks.map(t => `
+                <tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')">
+                    <td class="px-6 py-4"><div class="font-black text-slate-800 tracking-tight text-xs">${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td>
+                    <td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td>
+                    <td class="px-6 py-4 text-slate-500 font-medium text-[9px] uppercase tracking-widest">${t.allAssignees}</td>
+                    <td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td>
+                </tr>`).join('');
         }
 
         function openTaskDetail(id) {
@@ -467,7 +487,7 @@
                     <div><h3 class="text-2xl font-black text-slate-900 leading-tight tracking-tighter">${t.name}</h3><div class="text-[10px] font-black text-purple-600 uppercase mt-2 tracking-[0.3em]">Requirement Data Link</div></div>
                     <div class="grid grid-cols-2 gap-6 py-6 border-y border-slate-100 my-6">
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Status</p><span class="st-badge st-${t.statusKey}">${t.status}</span></div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Resource</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.assignee}</p></div>
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Owner(s)</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.allAssignees}</p></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Sprint</p><p class="text-sm font-bold text-slate-600 tracking-tight">${t.sprint}</p></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Account</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.client}</p></div>
                         <div class="col-span-2"><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest">Deployment Date</p><p class="text-lg font-black text-slate-900 tracking-tighter">${t.dueDate ? t.dueDate.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric'}) : 'NOT SCHEDULED'}</p></div>
@@ -495,31 +515,35 @@
         }
 
         function renderClientProgress(data) {
-            const clients = [...new Set(data.map(t => t.client))];
+            const uniqueById = Array.from(new Map(data.map(t => [t.id, t])).values());
+            const clients = [...new Set(uniqueById.map(t => t.client))].sort();
             document.getElementById('view-client').innerHTML = clients.map(c => {
-                const ct = data.filter(t => t.client === c);
+                const ct = uniqueById.filter(t => t.client === c);
                 const done = ct.filter(t => t.isClosed).length;
                 const prog = ct.length > 0 ? Math.round((done / ct.length) * 100) : 0;
-                return `<div class="glass-card p-6 space-y-5 cursor-pointer-hover flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client')"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col"><span class="text-slate-900 text-sm">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right"><span class="text-slate-900 text-sm">${ct.length}</span><span>Volume</span></div></div></div>`;
+                return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client')"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col"><span class="text-slate-900 text-sm">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right"><span class="text-slate-900 text-sm">${ct.length}</span><span>Volume</span></div></div></div>`;
             }).join('');
         }
 
         function renderUnassigned(data) {
             const f = data.filter(t => t.assignee === "Unassigned");
-            document.getElementById('unassignedCounter').innerText = `${f.length} items`;
-            document.getElementById('unassignedTable').innerHTML = f.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-800 flex items-center gap-3"><div>${t.name}</div> <span class="bg-red-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest alert-pulse shadow-sm">ATTENTION</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 font-black uppercase text-[9px] text-red-600 tracking-widest">${t.priority}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Allocation Optimized</td></tr>';
+            const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
+            document.getElementById('unassignedCounter').innerText = `${unique.length} items`;
+            document.getElementById('unassignedTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-800 flex items-center gap-3"><div>${t.name}</div> <span class="bg-red-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest alert-pulse shadow-sm">ATTENTION</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 font-black uppercase text-[9px] text-red-600 tracking-widest">${t.priority}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Allocation Optimized</td></tr>';
         }
 
         function renderNoDeadline(data) {
             const f = data.filter(t => !t.dueDate);
-            document.getElementById('noDeadlineCounter').innerText = `${f.length} items`;
-            document.getElementById('noDeadlineTable').innerHTML = f.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-900 tracking-tight">${t.name}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.assignee}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Schedule Complete</td></tr>';
+            const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
+            document.getElementById('noDeadlineCounter').innerText = `${unique.length} items`;
+            document.getElementById('noDeadlineTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-900 tracking-tight">${t.name}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-4"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.allAssignees}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Schedule Complete</td></tr>';
         }
 
         function renderBacklog(data) {
             const f = data.filter(t => t.sprint.toLowerCase().includes('backlog') || t.status.toLowerCase().includes('backlog'));
-            document.getElementById('backlogCounter').innerText = `${f.length} items`;
-            document.getElementById('backlogTable').innerHTML = f.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-black text-slate-800">${t.name}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-3"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Backlog Clear</td></tr>';
+            const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
+            document.getElementById('backlogCounter').innerText = `${unique.length} items`;
+            document.getElementById('backlogTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-black text-slate-800">${t.name}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-3"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Backlog Clear</td></tr>';
         }
 
         window.onload = () => fetchRealData(true);
