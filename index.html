@@ -12,7 +12,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; height: 100vh; overflow-x: hidden; font-size: 0.875rem; }
         
-        /* Layering Fix: Ensuring filters and modals are on top */
         .filter-container { position: relative; z-index: 100; }
         .filter-dropdown { position: relative; }
         .filter-content { 
@@ -39,7 +38,6 @@
         .tab-btn { border-bottom: 2px solid transparent; transition: all 0.3s; padding: 1rem 0.75rem; color: #94a3b8; font-size: 0.7rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; }
         .tab-btn.active { border-bottom-color: #7c3aed; color: #7c3aed; }
         
-        /* Modal Layering */
         .modal-overlay { 
             display: none; 
             position: fixed; 
@@ -233,7 +231,7 @@
         <section id="view-plan" class="tab-content hidden space-y-6 text-xs">
             <div id="planSummary" class="grid grid-cols-1 md:grid-cols-4 gap-6"></div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 glass-card p-6 h-[400px] relative flex flex-col"><canvas id="chartCapacity"></canvas></div>
+                <div class="lg:col-span-2 glass-card p-6 h-[400px] relative flex flex-col items-center"><canvas id="chartCapacity"></canvas></div>
                 <div class="glass-card p-6 space-y-5 overflow-y-auto max-h-[400px] bg-slate-50/20 shadow-inner" id="capacityList"></div>
             </div>
         </section>
@@ -241,7 +239,7 @@
         <!-- CLIENT VIEW -->
         <section id="view-client" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6 text-sm"></section>
 
-        <!-- SUPPORT TAB (Escalations) -->
+        <!-- SUPPORT TAB -->
         <section id="view-unassigned" class="tab-content hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center mb-6">
                 <div class="glass-card p-6 h-[300px] relative flex flex-col items-center">
@@ -283,7 +281,7 @@
     <script>
         Chart.register(ChartDataLabels);
         window.tasks = [];
-        window.currentFilteredTasks = []; // Global filter context
+        window.currentFilteredTasks = [];
         let charts = {};
         window.currentTab = 'mgmt';
         const DEV_CAPACITY = 32;
@@ -305,6 +303,8 @@
                 const json = await res.json();
                 window.tasks = json.tasks.map(t => {
                     let clientName = "Internal";
+                    
+                    // 1. Resolve Client from Custom Fields
                     const cf = t.custom_fields?.find(f => 
                         f.name.toLowerCase().includes('client') || 
                         f.name.toLowerCase().includes('account') ||
@@ -323,9 +323,16 @@
                         }
                     }
                     
-                    if ((!clientName || clientName === "Internal") && t.tags && t.tags.length > 0) {
+                    // 2. COMBINE: Fallback to Tags if empty or "Internal"
+                    if ((!clientName || String(clientName).toLowerCase() === "internal") && t.tags?.length > 0) {
                         clientName = t.tags[0].name;
                     }
+
+                    // 3. NORMALIZE: Ensure casing is identical to prevent duplicate chart segments/filters
+                    clientName = (String(clientName || "Internal")).trim();
+                    if (clientName.toLowerCase() === "internal") clientName = "Internal";
+                    // Enforce Title Case or consistent casing if needed: 
+                    clientName = clientName.charAt(0).toUpperCase() + clientName.slice(1).toLowerCase();
 
                     // QA Date logic
                     const qaField = t.custom_fields?.find(f => f.name.toLowerCase().includes('qa') && (f.type === 'date' || f.name.toLowerCase().includes('date')));
@@ -335,7 +342,7 @@
                         qaDateStr = !isNaN(d.getTime()) ? d.toLocaleDateString('en-GB') : "N/A";
                     }
 
-                    // Deploy Date logic (Custom "Deploy Date" field)
+                    // Deploy Date logic
                     const deployField = t.custom_fields?.find(f => f.name.toLowerCase().includes('deploy') && (f.type === 'date' || f.name.toLowerCase().includes('date')));
                     let deployDateVal = null;
                     if (deployField?.value) {
@@ -413,6 +420,7 @@
                 }
             });
 
+            // Update Sprints Label
             const sLabel = document.getElementById('labelSprint');
             if (activeFilters.sprints.length === 0) sLabel.innerText = "All Sprints";
             else if (activeFilters.sprints.length === 1) sLabel.innerText = activeFilters.sprints[0];
@@ -447,6 +455,7 @@
         function renderView(view) {
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
             
+            // GLOBAL FILTER APPLICATION
             window.currentFilteredTasks = window.tasks.filter(t => 
                 (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && 
                 (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && 
@@ -570,17 +579,20 @@
         }
 
         function renderClientProgress(data) {
+            // Deduplicate to prevent double counting in volume
             const uniqueById = Array.from(new Map(data.map(t => [t.id, t])).values());
             const clients = [...new Set(uniqueById.map(t => t.client))].sort();
             document.getElementById('view-client').innerHTML = clients.map(c => {
                 const ct = uniqueById.filter(t => t.client === c);
                 const done = ct.filter(t => t.isClosed).length;
                 const prog = ct.length > 0 ? Math.round((done / ct.length) * 100) : 0;
+                // Use global filtered set for click source
                 return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client', window.currentFilteredTasks)"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length}</span><span>Volume</span></div></div></div>`;
             }).join('');
         }
 
         function renderSupport() {
+            // IGNORE SPRINT FILTER BUT RESPECT OTHERS
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
             const supportOnly = window.tasks.filter(t => 
                 t.isEscalation &&
@@ -597,7 +609,7 @@
         }
 
         function renderNoDeadline(data) {
-            const f = data.filter(t => !t.deployDate && !t.isClosed); // FIXED: Exclude Deployed/Closed
+            const f = data.filter(t => !t.deployDate && !t.isClosed);
             const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('noDeadlineCounter').innerText = `${unique.length} items`;
             document.getElementById('noDeadlineTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-900 tracking-tight text-xs">${t.name}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.allAssignees}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Schedule Complete</td></tr>';
