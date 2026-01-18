@@ -367,13 +367,13 @@
                     if (deployField?.value) {
                         const d = new Date(parseInt(deployField.value));
                         if (!isNaN(d.getTime())) deployDateVal = d;
-                    } else if (t.due_date) {
-                        deployDateVal = new Date(parseInt(t.due_date));
-                    }
+                    } 
 
                     const rStatus = t.status?.status || "todo";
                     const sKey = rStatus.toLowerCase().replace(/[\s-]/g, '');
                     const allOwners = t.assignees && t.assignees.length > 0 ? t.assignees.map(a => a.username).join(", ") : "Unassigned";
+
+                    const isBroughtForward = (t.tags || []).some(tag => /bring forward|rolled over|rollover/i.test(tag.name)) || /\[BF\]|bring forward/i.test(t.name);
 
                     return {
                         id: t.id, name: t.name, url: t.url, client: clientName, 
@@ -382,11 +382,13 @@
                         hours: t.time_estimate ? Math.round(t.time_estimate / 3600000 * 10) / 10 : 0,
                         isClosed: (sKey === 'deployed' || sKey === 'closed' || t.status?.type === 'closed'),
                         dueDate: t.due_date ? new Date(parseInt(t.due_date)) : null,
+                        startDate: t.start_date ? new Date(parseInt(t.start_date)) : null,
                         deployDate: deployDateVal,
                         qaDate: qaDateStr,
                         priority: t.priority?.priority || "None",
                         allAssignees: allOwners,
-                        isEscalation: /support|escalation/i.test(t.list?.name)
+                        isEscalation: /support|escalation/i.test(t.list?.name),
+                        isBroughtForward: isBroughtForward
                     };
                 });
                 document.getElementById('syncStatus').innerText = `UPDATED: ${new Date().toLocaleTimeString()}`;
@@ -488,9 +490,9 @@
             );
             
             if (view === 'mgmt') {
-                const display = window.currentFilteredTasks; // MODIFIED: Show all, including Unassigned
+                const display = window.currentFilteredTasks; 
                 document.getElementById('taskCounter').innerText = `${display.length} items`;
-                document.getElementById('mgmtTable').innerHTML = display.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight text-xs">${t.name}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs ${t.assignee === 'Unassigned' ? 'text-red-500 font-black' : ''}">${t.assignee}</td></tr>`).join('');
+                document.getElementById('mgmtTable').innerHTML = display.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight text-xs"><div class="flex items-center gap-2">${t.name} ${t.isBroughtForward ? '<span class="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-black uppercase tracking-tighter">Brought Forward</span>' : ''}</div></td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs ${t.assignee === 'Unassigned' ? 'text-red-500 font-black' : ''}">${t.assignee}</td></tr>`).join('');
                 renderCharts(display, 'chartStatus', 'chartAssignee');
             } 
             else if (view === 'plan') renderPlanning(window.currentFilteredTasks.filter(t => t.assignee !== "Unassigned"));
@@ -586,21 +588,28 @@
             const uniqueTasks = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('listModalTitle').innerText = (type === 'client' || type === 'assignee') ? `${val} ${sub ? ' - ' + sub : ''}` : displayVal;
             document.getElementById('listModalCounter').innerText = `${uniqueTasks.length} items`;
-            document.getElementById('listModalTableBody').innerHTML = uniqueTasks.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4"><div class="font-black text-slate-800 tracking-tight text-xs">${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-500 font-medium text-[9px] uppercase tracking-widest">${t.allAssignees}</td><td class="px-6 py-4 text-right"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('');
+            document.getElementById('listModalTableBody').innerHTML = uniqueTasks.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4"><div class="font-black text-slate-800 tracking-tight text-xs">${t.name} ${t.isBroughtForward ? '<span class="text-[7px] text-amber-600 font-black">[BF]</span>' : ''}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-500 font-medium text-[9px] uppercase tracking-widest">${t.allAssignees}</td><td class="px-6 py-4 text-right"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('');
         }
 
         function openTaskDetail(id) {
             const t = window.tasks.find(x => x.id === id); if (!t) return;
             document.getElementById('detailContent').innerHTML = `
                 <div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <div><h3 class="text-2xl font-black text-slate-900 leading-tight tracking-tighter text-xs">${t.name}</h3><div class="text-[10px] font-black text-purple-600 uppercase mt-2 tracking-[0.3em]">Requirement Data Link</div></div>
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 leading-tight tracking-tighter text-xs">${t.name}</h3>
+                        ${t.isBroughtForward ? '<div class="mt-2"><span class="text-[9px] font-black bg-amber-100 text-amber-700 px-3 py-1 rounded-lg uppercase tracking-widest">Brought Forward</span></div>' : ''}
+                        <div class="text-[10px] font-black text-purple-600 uppercase mt-2 tracking-[0.3em]">Requirement Data Link</div>
+                    </div>
                     <div class="grid grid-cols-2 gap-6 py-6 border-y border-slate-100 my-6 text-xs">
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Status</p><span class="st-badge st-${t.statusKey}">${t.status}</span></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Resource</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.allAssignees}</p></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Sprint</p><p class="text-sm font-bold text-slate-600 tracking-tight">${t.sprint}</p></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Account</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.client}</p></div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">QA Date</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.qaDate}</p></div>
-                        <div class="col-span-2"><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Deployment Date</p><p class="text-lg font-black text-slate-900 tracking-tighter">${t.deployDate ? t.deployDate.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric'}) : 'NOT SCHEDULED'}</p></div>
+                        <div class="col-span-2 flex gap-6">
+                           <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Start Date</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.startDate ? t.startDate.toLocaleDateString('en-GB') : 'N/A'}</p></div>
+                           <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Due Date</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.dueDate ? t.dueDate.toLocaleDateString('en-GB') : 'N/A'}</p></div>
+                        </div>
+                        <div class="col-span-2"><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Target Deployment</p><p class="text-lg font-black text-slate-900 tracking-tighter">${t.deployDate ? t.deployDate.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric'}) : 'NOT SCHEDULED'}</p></div>
                     </div>
                     <div class="flex justify-between items-center pt-2">
                         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Effort: <span class="text-slate-900 text-sm ml-2">${t.hours}h</span></div>
@@ -611,7 +620,22 @@
         }
 
         function renderPlanning(data) {
-            const total = data.reduce((s, t) => s + t.hours, 0);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const sprintWindowEnd = new Date();
+            sprintWindowEnd.setDate(today.getDate() + 14); 
+
+            const calcHours = (t) => {
+                if (t.dueDate && t.dueDate >= today && t.dueDate <= sprintWindowEnd) {
+                    return t.hours;
+                }
+                return 0;
+            };
+
+            const total = data.reduce((s, t) => s + calcHours(t), 0);
+            const includedCount = data.filter(t => calcHours(t) > 0).length;
+            const excludedCount = data.filter(t => t.hours > 0 && calcHours(t) === 0).length;
+
             let sprintCount = activeFilters.sprints.length;
             if (sprintCount === 0) {
                 const uniqueSprints = [...new Set(window.tasks.filter(t => !t.isEscalation && t.assignee !== "Unassigned").map(t => t.sprint))];
@@ -619,8 +643,22 @@
             }
             const currentLimit = sprintCount * DEV_CAPACITY;
 
-            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div><p class="text-[10px] font-black text-purple-600 uppercase tracking-widest mt-1">Global Capacity: ${currentLimit}H (${sprintCount} Sprints x 32H)</p></div>`;
-            const devHrs = data.reduce((acc, t) => { acc[t.assignee] = (acc[t.assignee] || 0) + t.hours; return acc; }, {});
+            document.getElementById('planSummary').innerHTML = `
+                <div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md">
+                    <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Selected Sprint Capacity</h3>
+                    <div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div>
+                    <p class="text-[10px] font-black text-purple-600 uppercase tracking-widest mt-1">Velocity Limit: ${currentLimit}H (${sprintCount} Sprints x 32H)</p>
+                    <div class="mt-4 flex gap-4">
+                        ${includedCount > 0 ? `<span class="text-[8px] font-black bg-emerald-50 text-emerald-600 px-2 py-1 rounded-lg uppercase tracking-widest">${includedCount} Tasks in Schedule</span>` : ''}
+                        ${excludedCount > 0 ? `<span class="text-[8px] font-black bg-slate-50 text-slate-400 px-2 py-1 rounded-lg uppercase tracking-widest">${excludedCount} Tasks Excluded (Due Date Out of Sprint)</span>` : ''}
+                    </div>
+                </div>`;
+
+            const devHrs = data.reduce((acc, t) => { 
+                acc[t.assignee] = (acc[t.assignee] || 0) + calcHours(t); 
+                return acc; 
+            }, {});
+
             const labels = Object.keys(devHrs);
             if(charts.plan) charts.plan.destroy();
             charts.plan = new Chart(document.getElementById('chartCapacity'), { type: 'bar', data: { labels, datasets: [{ label: 'Used', data: Object.values(devHrs), backgroundColor: '#7c3aed', borderRadius: 8, barThickness: 24 }, { label: 'Limit', data: labels.map(() => currentLimit), backgroundColor: '#f1f5f9', borderRadius: 8, barThickness: 24 }] }, options: { maintainAspectRatio: false, indexAxis: 'y', onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts.plan.data.labels[i[0].index], 'assignee', data); }, plugins: { datalabels: { display: false }, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } } } });
@@ -640,6 +678,7 @@
 
         function renderSupport() {
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
+            // MODIFIED: Support tab now ignores the global activeFilters.sprints
             const supportOnly = window.tasks.filter(t => 
                 t.isEscalation &&
                 (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && 
