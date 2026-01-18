@@ -12,6 +12,7 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; height: 100vh; overflow-x: hidden; font-size: 0.875rem; }
         
+        /* Layering Fix: Ensuring filters and modals are on top */
         .filter-container { position: relative; z-index: 100; }
         .filter-dropdown { position: relative; }
         .filter-content { 
@@ -38,6 +39,7 @@
         .tab-btn { border-bottom: 2px solid transparent; transition: all 0.3s; padding: 1rem 0.75rem; color: #94a3b8; font-size: 0.7rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; }
         .tab-btn.active { border-bottom-color: #7c3aed; color: #7c3aed; }
         
+        /* Modal Layering */
         .modal-overlay { 
             display: none; 
             position: fixed; 
@@ -81,7 +83,7 @@
 
     <!-- DRILL-DOWN POPUP -->
     <div id="taskListModal" class="modal-overlay" onclick="closeAllModals(event)">
-        <div class="glass-card w-full max-w-5xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border-none" onclick="event.stopPropagation()">
+        <div class="glass-card w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border-none" onclick="event.stopPropagation()">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <div class="flex items-center gap-4">
                     <h2 class="text-xl font-black text-slate-800 tracking-tight" id="listModalTitle">Context Overview</h2>
@@ -114,9 +116,9 @@
         </div>
     </div>
 
-    <!-- TASK DETAIL POPUP -->
+    <!-- TASK DETAIL POPUP (Adjusted Size) -->
     <div id="taskDetailModal" class="modal-overlay" onclick="closeAllModals(event)">
-        <div class="glass-card w-full max-xl max-h-[80vh] overflow-hidden shadow-2xl border-none flex flex-col" onclick="event.stopPropagation()">
+        <div class="glass-card w-full max-w-md max-h-[85vh] overflow-hidden shadow-2xl border-none flex flex-col" onclick="event.stopPropagation()">
             <div class="px-6 py-3 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest">Requirement Detail</h2>
                 <button onclick="closeModal('taskDetailModal')" class="text-slate-400 hover:text-slate-600 p-1.5 transition-all duration-200">
@@ -231,7 +233,7 @@
         <section id="view-plan" class="tab-content hidden space-y-6 text-xs">
             <div id="planSummary" class="grid grid-cols-1 md:grid-cols-4 gap-6"></div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 glass-card p-6 h-[400px] relative flex flex-col"><canvas id="chartCapacity"></canvas></div>
+                <div class="lg:col-span-2 glass-card p-6 h-[400px] relative flex flex-col items-center"><canvas id="chartCapacity"></canvas></div>
                 <div class="glass-card p-6 space-y-5 overflow-y-auto max-h-[400px] bg-slate-50/20 shadow-inner" id="capacityList"></div>
             </div>
         </section>
@@ -239,7 +241,7 @@
         <!-- CLIENT VIEW -->
         <section id="view-client" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6 text-sm"></section>
 
-        <!-- SUPPORT TAB -->
+        <!-- SUPPORT TAB (Escalations) -->
         <section id="view-unassigned" class="tab-content hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center mb-6">
                 <div class="glass-card p-6 h-[300px] relative flex flex-col items-center">
@@ -271,14 +273,17 @@
             </div>
         </section>
         
+        <!-- DEADLINES VIEW -->
         <section id="view-no-deadline" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-blue-600 tracking-widest text-center text-center">Unscheduled Commitments</h3><span id="noDeadlineCounter" class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="noDeadlineTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
+        
+        <!-- BACKLOG VIEW -->
         <section id="view-backlog" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Project Backlog / Roadmap</h3><span id="backlogCounter" class="text-[10px] font-black bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="backlogTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
     </main>
 
     <script>
         Chart.register(ChartDataLabels);
         window.tasks = [];
-        window.currentFilteredTasks = []; 
+        window.currentFilteredTasks = [];
         let charts = {};
         window.currentTab = 'mgmt';
         const DEV_CAPACITY = 32;
@@ -322,11 +327,20 @@
                         clientName = t.tags[0].name;
                     }
 
+                    // QA Date logic
                     const qaField = t.custom_fields?.find(f => f.name.toLowerCase().includes('qa') && (f.type === 'date' || f.name.toLowerCase().includes('date')));
                     let qaDateStr = "N/A";
                     if (qaField?.value) {
                         const d = new Date(parseInt(qaField.value));
                         qaDateStr = !isNaN(d.getTime()) ? d.toLocaleDateString('en-GB') : "N/A";
+                    }
+
+                    // Deploy Date logic (Mapped to t.deployDate and native Deployment Date popup label)
+                    const deployField = t.custom_fields?.find(f => f.name.toLowerCase().includes('deploy') && (f.type === 'date' || f.name.toLowerCase().includes('date')));
+                    let deployDateVal = t.due_date ? new Date(parseInt(t.due_date)) : null; // Native fallback
+                    if (deployField?.value) {
+                        const d = new Date(parseInt(deployField.value));
+                        if (!isNaN(d.getTime())) deployDateVal = d;
                     }
 
                     const rStatus = t.status?.status || "todo";
@@ -339,6 +353,7 @@
                         hours: t.time_estimate ? Math.round(t.time_estimate / 3600000 * 10) / 10 : 0,
                         isClosed: (sKey === 'deployed' || sKey === 'closed' || t.status?.type === 'closed'),
                         dueDate: t.due_date ? new Date(parseInt(t.due_date)) : null,
+                        deployDate: deployDateVal,
                         qaDate: qaDateStr,
                         priority: t.priority?.priority || "None",
                         allAssignees: allOwners,
@@ -427,19 +442,10 @@
 
         function renderView(view) {
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
-            
-            // GLOBAL FILTER APPLICATION
-            window.currentFilteredTasks = window.tasks.filter(t => 
-                (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && 
-                (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && 
-                (activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint)) && 
-                (activeFilters.statuses.length === 0 || activeFilters.statuses.includes(t.status)) && 
-                (t.name.toLowerCase().includes(search))
-            );
+            window.currentFilteredTasks = window.tasks.filter(t => (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && (activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint)) && (activeFilters.statuses.length === 0 || activeFilters.statuses.includes(t.status)) && (t.name.toLowerCase().includes(search)));
             
             if (view === 'mgmt') {
-                // MANAGEMENT TAB: Show Sprints only, unless explicitly filtered
-                const display = window.currentFilteredTasks.filter(t => !t.isEscalation || (activeFilters.sprints.length > 0 && activeFilters.sprints.includes(t.sprint)));
+                const display = window.currentFilteredTasks.filter(t => activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint));
                 document.getElementById('taskCounter').innerText = `${display.length} items`;
                 document.getElementById('mgmtTable').innerHTML = display.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight">${t.name}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs">${t.assignee}</td></tr>`).join('');
                 renderCharts(display, 'chartStatus', 'chartAssignee');
@@ -511,7 +517,7 @@
             const uniqueTasks = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('listModalTitle').innerText = (type === 'client' || type === 'assignee') ? `${val} ${sub ? ' - ' + sub : ''}` : displayVal;
             document.getElementById('listModalCounter').innerText = `${uniqueTasks.length} items`;
-            document.getElementById('listModalTableBody').innerHTML = uniqueTasks.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4"><div class="font-black text-slate-800 tracking-tight text-xs">${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-500 font-medium text-[9px] uppercase tracking-widest text-xs">${t.allAssignees}</td><td class="px-6 py-4 text-right"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('');
+            document.getElementById('listModalTableBody').innerHTML = uniqueTasks.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4"><div class="font-black text-slate-800 tracking-tight text-xs">${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-500 font-medium text-[9px] uppercase tracking-widest">${t.allAssignees}</td><td class="px-6 py-4 text-right"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('');
         }
 
         function openTaskDetail(id) {
@@ -525,7 +531,7 @@
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Sprint</p><p class="text-sm font-bold text-slate-600 tracking-tight">${t.sprint}</p></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Account</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.client}</p></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">QA Date</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.qaDate}</p></div>
-                        <div class="col-span-2"><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Deployment Date</p><p class="text-lg font-black text-slate-900 tracking-tighter">${t.dueDate ? t.dueDate.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric'}) : 'NOT SCHEDULED'}</p></div>
+                        <div class="col-span-2"><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Deployment Date</p><p class="text-lg font-black text-slate-900 tracking-tighter">${t.deployDate ? t.deployDate.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric'}) : 'NOT SCHEDULED'}</p></div>
                     </div>
                     <div class="flex justify-between items-center pt-2">
                         <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Effort: <span class="text-slate-900 text-sm ml-2">${t.hours}h</span></div>
@@ -538,7 +544,6 @@
         function renderPlanning(data) {
             const total = data.reduce((s, t) => s + t.hours, 0);
             
-            // DYNAMIC CAPACITY: Count unique sprints IF filter is empty
             let sprintCount = activeFilters.sprints.length;
             if (sprintCount === 0) {
                 const uniqueSprints = [...new Set(window.tasks.filter(t => !t.isEscalation).map(t => t.sprint))];
@@ -546,7 +551,7 @@
             }
             const currentLimit = sprintCount * DEV_CAPACITY;
 
-            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div><p class="text-[10px] font-black text-purple-600 uppercase tracking-widest mt-1">Global Capacity: ${currentLimit}H (${sprintCount} Sprints x 32H)</p></div>`;
+            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div><p class="text-[10px] font-black text-purple-600 uppercase tracking-widest mt-1">Global Limit: ${currentLimit}H (${sprintCount} Sprints x 32H)</p></div>`;
             const devHrs = data.reduce((acc, t) => { acc[t.assignee] = (acc[t.assignee] || 0) + t.hours; return acc; }, {});
             const labels = Object.keys(devHrs);
             if(charts.plan) charts.plan.destroy();
@@ -555,19 +560,19 @@
         }
 
         function renderClientProgress(data) {
-            // DEDUPLICATE BY ID FIRST
             const uniqueById = Array.from(new Map(data.map(t => [t.id, t])).values());
             const clients = [...new Set(uniqueById.map(t => t.client))].sort();
             document.getElementById('view-client').innerHTML = clients.map(c => {
                 const ct = uniqueById.filter(t => t.client === c);
                 const done = ct.filter(t => t.isClosed).length;
                 const prog = ct.length > 0 ? Math.round((done / ct.length) * 100) : 0;
+                // FIX: card click references the correct filtered task set
                 return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client', window.currentFilteredTasks)"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length}</span><span>Volume</span></div></div></div>`;
             }).join('');
         }
 
         function renderSupport(data) {
-            // FIX: IGNORE SPRINT FILTER BUT RESPECT OTHERS
+            // IGNORE SPRINT FILTER BUT RESPECT OTHERS
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
             const supportOnly = window.tasks.filter(t => 
                 t.isEscalation &&
