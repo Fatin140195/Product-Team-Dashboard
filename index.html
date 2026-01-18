@@ -79,7 +79,7 @@
 </head>
 <body class="antialiased h-screen flex flex-col">
 
-    <!-- DRILL-DOWN POPUP (COMPACT SIZE) -->
+    <!-- DRILL-DOWN POPUP -->
     <div id="taskListModal" class="modal-overlay" onclick="closeAllModals(event)">
         <div class="glass-card w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border-none" onclick="event.stopPropagation()">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -114,7 +114,7 @@
         </div>
     </div>
 
-    <!-- TASK DETAIL POPUP (COMPACT SIZE) -->
+    <!-- TASK DETAIL POPUP -->
     <div id="taskDetailModal" class="modal-overlay" onclick="closeAllModals(event)">
         <div class="glass-card w-full max-w-md max-h-[80vh] overflow-hidden shadow-2xl border-none flex flex-col" onclick="event.stopPropagation()">
             <div class="px-6 py-3 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -148,6 +148,7 @@
                 <div onclick="switchTab('mgmt')" id="btn-mgmt" class="tab-btn active px-4 rounded-md">Management</div>
                 <div onclick="switchTab('plan')" id="btn-plan" class="tab-btn px-4 rounded-md">Planning</div>
                 <div onclick="switchTab('client')" id="btn-client" class="tab-btn px-4 rounded-md">Clients</div>
+                <div onclick="switchTab('attention')" id="btn-attention" class="tab-btn px-4 rounded-md text-red-500">Attention</div>
                 <div onclick="switchTab('unassigned')" id="btn-unassigned" class="tab-btn px-4 rounded-md">Support</div>
                 <div onclick="switchTab('no-deadline')" id="btn-no-deadline" class="tab-btn px-4 rounded-md">Deadlines</div>
                 <div onclick="switchTab('backlog')" id="btn-backlog" class="tab-btn px-4 rounded-md">Backlog</div>
@@ -167,7 +168,7 @@
         <section id="view-mgmt" class="tab-content space-y-6">
             <div class="glass-card p-4 flex flex-wrap gap-4 items-center bg-white/60 filter-container">
                 <div class="flex-1 min-w-[250px]">
-                    <input type="text" id="mgmtSearch" oninput="renderView('mgmt')" placeholder="Search project inventory..." class="w-full px-4 py-2.5 text-sm bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-purple-100 outline-none transition-all font-bold text-slate-700 shadow-inner">
+                    <input type="text" id="mgmtSearch" oninput="renderView(window.currentTab)" placeholder="Search project inventory..." class="w-full px-4 py-2.5 text-sm bg-slate-100 border-none rounded-xl focus:ring-2 focus:ring-purple-100 outline-none transition-all font-bold text-slate-700 shadow-inner">
                 </div>
                 <div class="flex gap-3 flex-wrap">
                     <div class="filter-dropdown">
@@ -239,6 +240,31 @@
         <!-- CLIENT VIEW -->
         <section id="view-client" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6 text-sm"></section>
 
+        <!-- ATTENTION VIEW (NO ASSIGNEE) -->
+        <section id="view-attention" class="tab-content hidden space-y-6">
+            <div class="glass-card border-l-4 border-red-500 bg-red-50 p-6 mb-6">
+                <h2 class="text-sm font-black text-red-600 uppercase tracking-widest">Action Required: Unassigned Tasks</h2>
+                <p class="text-xs text-red-500 mt-1">The following tasks have no owner assigned and are excluded from capacity planning.</p>
+            </div>
+            <div class="glass-card overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center">
+                    <h3 class="text-[10px] font-black uppercase text-red-600 tracking-widest">Unassigned Queue</h3>
+                    <span id="attentionCounter" class="text-[10px] font-black bg-red-100 text-red-600 px-3 py-1 rounded-lg">0 items</span>
+                </div>
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-slate-400 border-b border-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Requirement</th>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Sprint</th>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Client</th>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attentionTable" class="divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+        </section>
+
         <!-- SUPPORT TAB -->
         <section id="view-unassigned" class="tab-content hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center mb-6">
@@ -272,7 +298,7 @@
         </section>
         
         <!-- DEADLINES VIEW -->
-        <section id="view-no-deadline" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-blue-600 tracking-widest text-center text-center">Unscheduled Commitments</h3><span id="noDeadlineCounter" class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="noDeadlineTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
+        <section id="view-no-deadline" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-blue-600 tracking-widest text-center">Unscheduled Commitments</h3><span id="noDeadlineCounter" class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="noDeadlineTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
         
         <!-- BACKLOG VIEW -->
         <section id="view-backlog" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Project Backlog / Roadmap</h3><span id="backlogCounter" class="text-[10px] font-black bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="backlogTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
@@ -303,8 +329,6 @@
                 const json = await res.json();
                 window.tasks = json.tasks.map(t => {
                     let clientName = "Internal";
-                    
-                    // 1. Resolve Client from Custom Fields
                     const cf = t.custom_fields?.find(f => 
                         f.name.toLowerCase().includes('client') || 
                         f.name.toLowerCase().includes('account') ||
@@ -323,18 +347,14 @@
                         }
                     }
                     
-                    // 2. COMBINE: Fallback to Tags if empty or "Internal"
                     if ((!clientName || String(clientName).toLowerCase() === "internal") && t.tags?.length > 0) {
                         clientName = t.tags[0].name;
                     }
 
-                    // 3. NORMALIZE: Ensure casing is identical to prevent duplicate chart segments/filters
                     clientName = (String(clientName || "Internal")).trim();
                     if (clientName.toLowerCase() === "internal") clientName = "Internal";
-                    // Enforce Title Case or consistent casing if needed: 
                     clientName = clientName.charAt(0).toUpperCase() + clientName.slice(1).toLowerCase();
 
-                    // QA Date logic
                     const qaField = t.custom_fields?.find(f => f.name.toLowerCase().includes('qa') && (f.type === 'date' || f.name.toLowerCase().includes('date')));
                     let qaDateStr = "N/A";
                     if (qaField?.value) {
@@ -342,7 +362,6 @@
                         qaDateStr = !isNaN(d.getTime()) ? d.toLocaleDateString('en-GB') : "N/A";
                     }
 
-                    // Deploy Date logic
                     const deployField = t.custom_fields?.find(f => f.name.toLowerCase().includes('deploy') && (f.type === 'date' || f.name.toLowerCase().includes('date')));
                     let deployDateVal = null;
                     if (deployField?.value) {
@@ -357,7 +376,8 @@
                     const allOwners = t.assignees && t.assignees.length > 0 ? t.assignees.map(a => a.username).join(", ") : "Unassigned";
 
                     return {
-                        id: t.id, name: t.name, url: t.url, client: clientName, assignee: t.assignees?.[0]?.username || "Unassigned",
+                        id: t.id, name: t.name, url: t.url, client: clientName, 
+                        assignee: t.primaryAssignee || "Unassigned", 
                         status: rStatus, statusKey: sKey, sprint: t.list?.name || "Global",
                         hours: t.time_estimate ? Math.round(t.time_estimate / 3600000 * 10) / 10 : 0,
                         isClosed: (sKey === 'deployed' || sKey === 'closed' || t.status?.type === 'closed'),
@@ -420,7 +440,6 @@
                 }
             });
 
-            // Update Sprints Label
             const sLabel = document.getElementById('labelSprint');
             if (activeFilters.sprints.length === 0) sLabel.innerText = "All Sprints";
             else if (activeFilters.sprints.length === 1) sLabel.innerText = activeFilters.sprints[0];
@@ -449,13 +468,17 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); 
             document.getElementById(`view-${tabId}`).classList.remove('hidden'); 
             document.getElementById(`btn-${tabId}`).classList.add('active'); 
+            
+            const filterRow = document.querySelector('.filter-container');
+            if (tabId === 'attention') filterRow.classList.add('hidden');
+            else filterRow.classList.remove('hidden');
+
             renderView(tabId); 
         }
 
         function renderView(view) {
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
             
-            // GLOBAL FILTER APPLICATION
             window.currentFilteredTasks = window.tasks.filter(t => 
                 (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && 
                 (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && 
@@ -465,15 +488,41 @@
             );
             
             if (view === 'mgmt') {
-                const display = window.currentFilteredTasks.filter(t => activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint));
+                const display = window.currentFilteredTasks; // MODIFIED: Show all, including Unassigned
                 document.getElementById('taskCounter').innerText = `${display.length} items`;
-                document.getElementById('mgmtTable').innerHTML = display.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight text-xs">${t.name}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs">${t.assignee}</td></tr>`).join('');
+                document.getElementById('mgmtTable').innerHTML = display.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight text-xs">${t.name}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs ${t.assignee === 'Unassigned' ? 'text-red-500 font-black' : ''}">${t.assignee}</td></tr>`).join('');
                 renderCharts(display, 'chartStatus', 'chartAssignee');
-            } else if (view === 'plan') renderPlanning(window.currentFilteredTasks);
+            } 
+            else if (view === 'plan') renderPlanning(window.currentFilteredTasks.filter(t => t.assignee !== "Unassigned"));
             else if (view === 'client') renderClientProgress(window.currentFilteredTasks);
+            else if (view === 'attention') renderAttention();
             else if (view === 'unassigned') renderSupport();
             else if (view === 'no-deadline') renderNoDeadline(window.currentFilteredTasks);
             else if (view === 'backlog') renderBacklog(window.currentFilteredTasks);
+        }
+
+        function renderAttention() {
+            const search = document.getElementById('mgmtSearch').value.toLowerCase();
+            const attentionTasks = window.tasks.filter(t => 
+                t.assignee === "Unassigned" && 
+                !t.isClosed && 
+                (t.name.toLowerCase().includes(search))
+            );
+            
+            const unique = Array.from(new Map(attentionTasks.map(t => [t.id, t])).values());
+            document.getElementById('attentionCounter').innerText = `${unique.length} items`;
+            document.getElementById('attentionTable').innerHTML = unique.map(t => `
+                <tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')">
+                    <td class="px-6 py-4 font-black text-slate-800 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                            ${t.name}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td>
+                    <td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td>
+                    <td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td>
+                </tr>`).join('') || '<tr><td colspan="4" class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Inbox Zero: All tasks have owners</td></tr>';
         }
 
         function renderCharts(data, statusId, assigneeId) {
@@ -565,7 +614,7 @@
             const total = data.reduce((s, t) => s + t.hours, 0);
             let sprintCount = activeFilters.sprints.length;
             if (sprintCount === 0) {
-                const uniqueSprints = [...new Set(window.tasks.filter(t => !t.isEscalation).map(t => t.sprint))];
+                const uniqueSprints = [...new Set(window.tasks.filter(t => !t.isEscalation && t.assignee !== "Unassigned").map(t => t.sprint))];
                 sprintCount = uniqueSprints.length || 1;
             }
             const currentLimit = sprintCount * DEV_CAPACITY;
@@ -579,20 +628,17 @@
         }
 
         function renderClientProgress(data) {
-            // Deduplicate to prevent double counting in volume
             const uniqueById = Array.from(new Map(data.map(t => [t.id, t])).values());
             const clients = [...new Set(uniqueById.map(t => t.client))].sort();
             document.getElementById('view-client').innerHTML = clients.map(c => {
                 const ct = uniqueById.filter(t => t.client === c);
                 const done = ct.filter(t => t.isClosed).length;
                 const prog = ct.length > 0 ? Math.round((done / ct.length) * 100) : 0;
-                // Use global filtered set for click source
                 return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client', window.currentFilteredTasks)"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length}</span><span>Volume</span></div></div></div>`;
             }).join('');
         }
 
         function renderSupport() {
-            // IGNORE SPRINT FILTER BUT RESPECT OTHERS
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
             const supportOnly = window.tasks.filter(t => 
                 t.isEscalation &&
@@ -604,7 +650,7 @@
 
             const unique = Array.from(new Map(supportOnly.map(t => [t.id, t])).values());
             document.getElementById('unassignedCounter').innerText = `${unique.length} items`;
-            document.getElementById('unassignedTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-800 flex items-center gap-3 text-xs"><div>${t.name}</div> <span class="bg-red-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest alert-pulse shadow-sm uppercase">Support</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-4 text-slate-400 font-bold text-xs">${t.qaDate}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">No active support items</td></tr>';
+            document.getElementById('unassignedTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-800 flex items-center gap-3 text-xs"><div>${t.name}</div> <span class="bg-red-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest alert-pulse shadow-sm uppercase">Support</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-4 text-slate-400 font-bold text-xs">${t.qaDate}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td colspan="5" class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">No active support items</td></tr>';
             renderCharts(supportOnly, 'chartSupportStatus', 'chartSupportAssignee');
         }
 
@@ -612,14 +658,14 @@
             const f = data.filter(t => !t.deployDate && !t.isClosed);
             const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('noDeadlineCounter').innerText = `${unique.length} items`;
-            document.getElementById('noDeadlineTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-900 tracking-tight text-xs">${t.name}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.allAssignees}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Schedule Complete</td></tr>';
+            document.getElementById('noDeadlineTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-900 tracking-tight text-xs">${t.name}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.allAssignees}</td></tr>`).join('') || '<tr><td colspan="5" class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Schedule Complete</td></tr>';
         }
 
         function renderBacklog(data) {
             const f = data.filter(t => t.sprint.toLowerCase().includes('backlog') || t.status.toLowerCase().includes('backlog'));
             const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('backlogCounter').innerText = `${unique.length} items`;
-            document.getElementById('backlogTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-black text-slate-800 text-xs">${t.name}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Backlog Clear</td></tr>';
+            document.getElementById('backlogTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-black text-slate-800 text-xs">${t.name}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td colspan="4" class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Backlog Clear</td></tr>';
         }
 
         function closeModal(id) { document.getElementById(id).classList.remove('show'); }
