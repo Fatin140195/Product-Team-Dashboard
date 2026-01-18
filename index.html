@@ -12,7 +12,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; height: 100vh; overflow-x: hidden; font-size: 0.875rem; }
         
-        /* Layering Fix: Ensuring filters and modals are on top */
         .filter-container { position: relative; z-index: 100; }
         .filter-dropdown { position: relative; }
         .filter-content { 
@@ -39,7 +38,6 @@
         .tab-btn { border-bottom: 2px solid transparent; transition: all 0.3s; padding: 1rem 0.75rem; color: #94a3b8; font-size: 0.7rem; font-weight: 800; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; }
         .tab-btn.active { border-bottom-color: #7c3aed; color: #7c3aed; }
         
-        /* Modal Layering */
         .modal-overlay { 
             display: none; 
             position: fixed; 
@@ -60,7 +58,7 @@
         .filter-item input { margin-right: 10px; accent-color: #7c3aed; width: 16px; height: 16px; pointer-events: none; border-radius: 4px; }
 
         .st-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 3px 10px; border-radius: 6px; display: inline-block; white-space: nowrap; letter-spacing: 0.05em; color: white; }
-        .st-deployed { background: #00A884; }
+        .st-deployed, .st-closed { background: #00A884; }
         .st-pendingdeployment, .st-pendingdeployement { background: #D33131; }
         .st-test { background: #00B8D9; }
         .st-inreview { background: #6E5DC6; }
@@ -68,10 +66,9 @@
         .st-inprogress { background: #0084FF; }
         .st-kiv { background: #FF7A00; }
         .st-todo { background: #D9D9D9; color: #475569; }
-        .st-closed { background: #2ecc71; }
         
         .progress-bar { height: 8px; border-radius: 4px; background: #f1f5f9; overflow: hidden; }
-        .progress-fill { height: 100%; transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .progress-fill { height: 100%; transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1); }
         
         @keyframes pulse-alert { 0%, 100% { background-color: #dc2626; transform: scale(1); } 50% { background-color: #ef4444; transform: scale(0.95); } }
         .alert-pulse { animation: pulse-alert 1.5s infinite; }
@@ -82,7 +79,7 @@
 </head>
 <body class="antialiased h-screen flex flex-col">
 
-    <!-- DRILL-DOWN POPUP (SPLIT VIEW) -->
+    <!-- DRILL-DOWN POPUP -->
     <div id="taskListModal" class="modal-overlay" onclick="closeAllModals(event)">
         <div class="glass-card w-full max-w-5xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border-none" onclick="event.stopPropagation()">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -119,7 +116,7 @@
 
     <!-- TASK DETAIL POPUP -->
     <div id="taskDetailModal" class="modal-overlay" onclick="closeAllModals(event)">
-        <div class="glass-card w-full max-w-xl max-h-[80vh] overflow-hidden shadow-2xl border-none flex flex-col" onclick="event.stopPropagation()">
+        <div class="glass-card w-full max-xl max-h-[80vh] overflow-hidden shadow-2xl border-none flex flex-col" onclick="event.stopPropagation()">
             <div class="px-6 py-3 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest">Requirement Detail</h2>
                 <button onclick="closeModal('taskDetailModal')" class="text-slate-400 hover:text-slate-600 p-1.5 transition-all duration-200">
@@ -151,7 +148,7 @@
                 <div onclick="switchTab('mgmt')" id="btn-mgmt" class="tab-btn active px-4 rounded-md">Management</div>
                 <div onclick="switchTab('plan')" id="btn-plan" class="tab-btn px-4 rounded-md">Planning</div>
                 <div onclick="switchTab('client')" id="btn-client" class="tab-btn px-4 rounded-md">Clients</div>
-                <div onclick="switchTab('unassigned')" id="btn-unassigned" class="tab-btn px-4 rounded-md">Attention</div>
+                <div onclick="switchTab('unassigned')" id="btn-unassigned" class="tab-btn px-4 rounded-md">Support</div>
                 <div onclick="switchTab('no-deadline')" id="btn-no-deadline" class="tab-btn px-4 rounded-md">Deadlines</div>
                 <div onclick="switchTab('backlog')" id="btn-backlog" class="tab-btn px-4 rounded-md">Backlog</div>
             </nav>
@@ -242,20 +239,46 @@
         <!-- CLIENT VIEW -->
         <section id="view-client" class="tab-content hidden grid grid-cols-1 md:grid-cols-3 gap-6 text-sm"></section>
 
-        <!-- ATTENTION VIEW (Unassigned) -->
-        <section id="view-unassigned" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-red-600 tracking-[0.3em] italic text-center">Live Escalations</h3><span id="unassignedCounter" class="text-[10px] font-black bg-red-100 text-red-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="unassignedTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
+        <!-- SUPPORT TAB -->
+        <section id="view-unassigned" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-center mb-6">
+                <div class="glass-card p-6 h-[300px] relative flex flex-col items-center">
+                    <h3 class="text-[10px] font-black text-red-600 uppercase mb-4 tracking-[0.3em]">Escalation Status</h3>
+                    <div class="flex-1 w-full relative"><canvas id="chartSupportStatus"></canvas></div>
+                </div>
+                <div class="glass-card p-6 h-[300px] relative flex flex-col items-center">
+                    <h3 class="text-[10px] font-black text-red-600 uppercase mb-4 tracking-[0.3em]">Support Loading</h3>
+                    <div class="flex-1 w-full relative"><canvas id="chartSupportAssignee"></canvas></div>
+                </div>
+            </div>
+            <div class="glass-card overflow-hidden">
+                <div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center">
+                    <h3 class="text-[10px] font-black uppercase text-red-600 tracking-[0.3em] italic text-center">Live Support Escalations</h3>
+                    <span id="unassignedCounter" class="text-[10px] font-black bg-red-100 text-red-600 px-3 py-1 rounded-lg">0 items</span>
+                </div>
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-slate-400 border-b border-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Requirement</th>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Sprint</th>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Client</th>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">QA Date</th>
+                            <th class="px-6 py-3 font-bold uppercase tracking-widest text-[9px]">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unassignedTable" class="divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+        </section>
         
-        <!-- DEADLINES VIEW -->
-        <section id="view-no-deadline" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-blue-600 tracking-widest text-center">Unscheduled Commitments</h3><span id="noDeadlineCounter" class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="noDeadlineTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
-        
-        <!-- BACKLOG VIEW -->
+        <section id="view-no-deadline" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-blue-600 tracking-widest text-center text-center">Unscheduled Commitments</h3><span id="noDeadlineCounter" class="text-[10px] font-black bg-blue-100 text-blue-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="noDeadlineTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
         <section id="view-backlog" class="tab-content hidden space-y-6"><div class="glass-card overflow-hidden"><div class="px-6 py-4 border-b border-slate-100 bg-white flex justify-between items-center"><h3 class="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">Project Backlog / Roadmap</h3><span id="backlogCounter" class="text-[10px] font-black bg-slate-100 text-slate-600 px-3 py-1 rounded-lg">0 items</span></div><table class="w-full text-left text-xs"><tbody id="backlogTable" class="divide-y divide-slate-100 bg-white"></tbody></table></div></section>
     </main>
 
     <script>
         Chart.register(ChartDataLabels);
         window.tasks = [];
-        window.currentFilteredTasks = [];
+        window.currentFilteredTasks = []; 
         let charts = {};
         window.currentTab = 'mgmt';
         const DEV_CAPACITY = 32;
@@ -275,9 +298,7 @@
             try {
                 const res = await fetch("https://product-team-dashboard.fatin-rasyidah.workers.dev/");
                 const json = await res.json();
-                
-                let rawTasks = [];
-                json.tasks.forEach(t => {
+                window.tasks = json.tasks.map(t => {
                     let clientName = "Internal";
                     const cf = t.custom_fields?.find(f => 
                         f.name.toLowerCase().includes('client') || 
@@ -296,33 +317,34 @@
                             clientName = Array.isArray(cf.value) ? cf.value.join(', ') : cf.value;
                         }
                     }
+                    
                     if ((!clientName || clientName === "Internal") && t.tags && t.tags.length > 0) {
                         clientName = t.tags[0].name;
                     }
 
+                    const qaField = t.custom_fields?.find(f => f.name.toLowerCase().includes('qa') && (f.type === 'date' || f.name.toLowerCase().includes('date')));
+                    let qaDateStr = "N/A";
+                    if (qaField?.value) {
+                        const d = new Date(parseInt(qaField.value));
+                        qaDateStr = !isNaN(d.getTime()) ? d.toLocaleDateString('en-GB') : "N/A";
+                    }
+
                     const rStatus = t.status?.status || "todo";
                     const sKey = rStatus.toLowerCase().replace(/[\s-]/g, '');
-                    
-                    const allOwners = t.assigneeDisplay || t.allTeamAssignees || (t.assignees ? t.assignees.map(x => x.username).join(", ") : "Unassigned");
-                    
-                    const taskDetails = {
-                        id: t.id, name: t.name, url: t.url, client: clientName, 
+                    const allOwners = t.assignees && t.assignees.length > 0 ? t.assignees.map(a => a.username).join(", ") : "Unassigned";
+
+                    return {
+                        id: t.id, name: t.name, url: t.url, client: clientName, assignee: t.assignees?.[0]?.username || "Unassigned",
                         status: rStatus, statusKey: sKey, sprint: t.list?.name || "Global",
                         hours: t.time_estimate ? Math.round(t.time_estimate / 3600000 * 10) / 10 : 0,
                         isClosed: (sKey === 'deployed' || sKey === 'closed' || t.status?.type === 'closed'),
                         dueDate: t.due_date ? new Date(parseInt(t.due_date)) : null,
+                        qaDate: qaDateStr,
                         priority: t.priority?.priority || "None",
                         allAssignees: allOwners,
                         isEscalation: /support|escalation/i.test(t.list?.name)
                     };
-
-                    const teamMembers = (t.assignees && t.assignees.length > 0) ? t.assignees : [{ username: "Unassigned" }];
-                    teamMembers.forEach(a => {
-                        rawTasks.push({ ...taskDetails, assignee: a.username });
-                    });
                 });
-
-                window.tasks = rawTasks;
                 document.getElementById('syncStatus').innerText = `UPDATED: ${new Date().toLocaleTimeString()}`;
                 document.getElementById('autoSyncLabel').classList.remove('hidden');
                 resetTimer();
@@ -356,7 +378,7 @@
         function populateFilters() {
             const assignees = [...new Set(window.tasks.map(t => t.assignee))].sort((a,b) => a === "Unassigned" ? -1 : (b === "Unassigned" ? 1 : a.localeCompare(b)));
             const clients = [...new Set(window.tasks.map(t => t.client))].sort();
-            const sprints = [...new Set(window.tasks.map(t => t.sprint))].sort();
+            const sprints = [...new Set(window.tasks.map(t => t.sprint))].sort((a,b) => b.localeCompare(a, undefined, {numeric: true}));
             const statuses = [...new Set(window.tasks.map(t => t.status))].sort();
             
             const configs = { 
@@ -406,6 +428,7 @@
         function renderView(view) {
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
             
+            // GLOBAL FILTER APPLICATION
             window.currentFilteredTasks = window.tasks.filter(t => 
                 (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && 
                 (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && 
@@ -415,43 +438,46 @@
             );
             
             if (view === 'mgmt') {
-                document.getElementById('taskCounter').innerText = `${window.currentFilteredTasks.length} items`;
-                document.getElementById('mgmtTable').innerHTML = window.currentFilteredTasks.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight">${t.name}</td><td class="px-6 py-3"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs">${t.assignee}</td></tr>`).join('');
-                renderCharts(window.currentFilteredTasks);
+                // MANAGEMENT TAB: Show Sprints only, unless explicitly filtered
+                const display = window.currentFilteredTasks.filter(t => !t.isEscalation || (activeFilters.sprints.length > 0 && activeFilters.sprints.includes(t.sprint)));
+                document.getElementById('taskCounter').innerText = `${display.length} items`;
+                document.getElementById('mgmtTable').innerHTML = display.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight">${t.name}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs">${t.assignee}</td></tr>`).join('');
+                renderCharts(display, 'chartStatus', 'chartAssignee');
             } else if (view === 'plan') renderPlanning(window.currentFilteredTasks);
             else if (view === 'client') renderClientProgress(window.currentFilteredTasks);
-            else if (view === 'unassigned') renderUnassigned(window.currentFilteredTasks);
+            else if (view === 'unassigned') renderSupport(window.currentFilteredTasks);
             else if (view === 'no-deadline') renderNoDeadline(window.currentFilteredTasks);
             else if (view === 'backlog') renderBacklog(window.currentFilteredTasks);
         }
 
-        function renderCharts(data) {
+        function renderCharts(data, statusId, assigneeId) {
             const sMap = data.reduce((a, t) => { a[t.status] = (a[t.status]||0)+1; return a; }, {});
             const dMap = data.reduce((a, t) => { a[t.assignee] = (a[t.assignee]||0)+1; return a; }, {});
-            if(charts.status) charts.status.destroy();
-            charts.status = new Chart(document.getElementById('chartStatus'), { 
+            
+            if(charts[statusId]) charts[statusId].destroy();
+            charts[statusId] = new Chart(document.getElementById(statusId), { 
                 type: 'doughnut', 
                 data: { labels: Object.keys(sMap), datasets: [{ data: Object.values(sMap), backgroundColor: Object.keys(sMap).map(s => getStatusColor(s)), borderWidth: 0, hoverOffset: 20 }] }, 
-                options: { maintainAspectRatio: false, onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts.status.data.labels[i[0].index], 'status'); }, plugins: { legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { weight: '800', size: 9 } } }, datalabels: { color: '#fff', font: { weight: '900', size: 10 }, formatter: (v, ctx) => { let sum = 0; ctx.chart.data.datasets[0].data.map(d => sum += d); return (v*100/sum).toFixed(0)+"%"; } } }, cutout: '70%' } 
+                options: { maintainAspectRatio: false, onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts[statusId].data.labels[i[0].index], 'status', data); }, plugins: { legend: { display: true, position: 'bottom', labels: { usePointStyle: true, padding: 15, font: { weight: '800', size: 9 } } }, datalabels: { color: '#fff', font: { weight: '900', size: 10 }, formatter: (v, ctx) => { let sum = 0; ctx.chart.data.datasets[0].data.map(d => sum += d); return (v*100/sum).toFixed(0)+"%"; } } }, cutout: '70%' } 
             });
-            if(charts.dev) charts.dev.destroy();
-            charts.dev = new Chart(document.getElementById('chartAssignee'), { 
+            
+            if(charts[assigneeId]) charts[assigneeId].destroy();
+            charts[assigneeId] = new Chart(document.getElementById(assigneeId), { 
                 type: 'bar', 
                 data: { labels: Object.keys(dMap), datasets: [{ label: 'Items', data: Object.values(dMap), backgroundColor: '#7c3aed', borderRadius: 8, barThickness: 24 }] }, 
-                options: { maintainAspectRatio: false, onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts.dev.data.labels[i[0].index], 'assignee'); }, plugins: { legend: { display: false }, datalabels: { display: false } }, scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false }, ticks: { font: { weight: '800', size: 9 } } } } } 
+                options: { maintainAspectRatio: false, onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts[assigneeId].data.labels[i[0].index], 'assignee', data); }, plugins: { legend: { display: false }, datalabels: { display: false } }, scales: { y: { beginAtZero: true, grid: { display: false } }, x: { grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } } } 
             });
         }
 
-        function openDrillDownPopup(val, type) {
+        function openDrillDownPopup(val, type, sourceSet) {
             document.getElementById('listModalTitle').innerText = val;
-            renderModalChart(type, val);
-            refreshDrillDownList(type, val);
+            renderModalChart(type, val, sourceSet);
+            refreshDrillDownList(type, val, sourceSet);
             document.getElementById('taskListModal').classList.add('show');
         }
 
-        function renderModalChart(type, initial) {
-            const dataPool = window.currentFilteredTasks;
-            const set = dataPool.filter(t => (type === 'client' ? t.client === initial : (type === 'assignee' ? t.assignee === initial : true)));
+        function renderModalChart(type, initial, sourceSet) {
+            const set = sourceSet.filter(t => (type === 'client' ? t.client === initial : (type === 'assignee' ? t.assignee === initial : true)));
             const map = set.reduce((a, t) => { const k = t.status; a[k] = (a[k]||0)+1; return a; }, {});
             if (charts.modal) charts.modal.destroy();
             charts.modal = new Chart(document.getElementById('modalChart'), { 
@@ -463,7 +489,7 @@
                         if (i.length > 0) {
                             const index = i[0].index;
                             const newSubVal = this.data.labels[index];
-                            refreshDrillDownList(type, initial, newSubVal); 
+                            refreshDrillDownList(type, initial, sourceSet, newSubVal); 
                         }
                     }, 
                     plugins: { 
@@ -475,39 +501,36 @@
             });
         }
 
-        function refreshDrillDownList(type, val, sub = null) {
-            const dataPool = window.currentFilteredTasks;
+        function refreshDrillDownList(type, val, sourceSet, sub = null) {
             let f = [];
             const displayVal = sub || val;
-            if (type === 'client') f = dataPool.filter(t => t.client === val && (sub ? t.status === sub : true));
-            else if (type === 'assignee') f = dataPool.filter(t => t.assignee === val && (sub ? t.status === sub : true));
-            else f = dataPool.filter(t => t.status === displayVal);
+            if (type === 'client') f = sourceSet.filter(t => t.client === val && (sub ? t.status === sub : true));
+            else if (type === 'assignee') f = sourceSet.filter(t => t.assignee === val && (sub ? t.status === sub : true));
+            else f = sourceSet.filter(t => t.status === displayVal);
             
             const uniqueTasks = Array.from(new Map(f.map(t => [t.id, t])).values());
-
             document.getElementById('listModalTitle').innerText = (type === 'client' || type === 'assignee') ? `${val} ${sub ? ' - ' + sub : ''}` : displayVal;
-            document.getElementById('listModalCounter').innerText = `${uniqueTasks.length} unique items`;
-            document.getElementById('listModalTableBody').innerHTML = uniqueTasks.map(t => `
-                <tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')">
-                    <td class="px-6 py-4 font-bold text-slate-800 tracking-tight text-xs"><div>${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td>
-                    <td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td>
-                    <td class="px-6 py-4 text-slate-500 font-medium text-xs">${t.allAssignees}</td>
-                    <td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td>
-                </tr>`).join('');
+            document.getElementById('listModalCounter').innerText = `${uniqueTasks.length} items`;
+            document.getElementById('listModalTableBody').innerHTML = uniqueTasks.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4"><div class="font-black text-slate-800 tracking-tight text-xs">${t.name}</div><div class="text-[9px] text-slate-400 uppercase font-black tracking-widest mt-0.5">${t.client}</div></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-500 font-medium text-[9px] uppercase tracking-widest text-xs">${t.allAssignees}</td><td class="px-6 py-4 text-right"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('');
         }
 
         function openTaskDetail(id) {
             const t = window.tasks.find(x => x.id === id); if (!t) return;
             document.getElementById('detailContent').innerHTML = `
                 <div class="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <h3 class="text-2xl font-black text-slate-900 leading-tight tracking-tighter text-xs">${t.name}</h3>
+                    <div><h3 class="text-2xl font-black text-slate-900 leading-tight tracking-tighter text-xs">${t.name}</h3><div class="text-[10px] font-black text-purple-600 uppercase mt-2 tracking-[0.3em]">Requirement Data Link</div></div>
                     <div class="grid grid-cols-2 gap-6 py-6 border-y border-slate-100 my-6 text-xs">
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Status</p><span class="st-badge st-${t.statusKey}">${t.status}</span></div>
-                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Owner(s)</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.allAssignees}</p></div>
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Resource</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.allAssignees}</p></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Sprint</p><p class="text-sm font-bold text-slate-600 tracking-tight">${t.sprint}</p></div>
                         <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Account</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.client}</p></div>
+                        <div><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">QA Date</p><p class="text-sm font-black text-slate-900 tracking-tight">${t.qaDate}</p></div>
+                        <div class="col-span-2"><p class="text-[9px] font-black text-slate-300 uppercase mb-2 tracking-widest text-xs">Deployment Date</p><p class="text-lg font-black text-slate-900 tracking-tighter">${t.dueDate ? t.dueDate.toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric'}) : 'NOT SCHEDULED'}</p></div>
                     </div>
-                    <div class="flex justify-between items-center"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Score: <span class="text-slate-900 text-sm ml-2">${t.hours}h</span></span><a href="${t.url}" target="_blank" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-purple-600 shadow-md">Open Task</a></div>
+                    <div class="flex justify-between items-center pt-2">
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Effort: <span class="text-slate-900 text-sm ml-2">${t.hours}h</span></div>
+                        <a href="${t.url}" target="_blank" class="bg-slate-900 text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 hover:bg-purple-600 transition-all shadow-md active:scale-95">Open In ClickUp <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" stroke-width="2.5"></path></svg></a>
+                    </div>
                 </div>`;
             document.getElementById('taskDetailModal').classList.add('show');
         }
@@ -515,41 +538,49 @@
         function renderPlanning(data) {
             const total = data.reduce((s, t) => s + t.hours, 0);
             
-            // DYNAMIC CAPACITY LOGIC
-            // If "All Sprints" (activeFilters.sprints empty), count all unique sprints found in window.tasks
+            // DYNAMIC CAPACITY: Count unique sprints IF filter is empty
             let sprintCount = activeFilters.sprints.length;
             if (sprintCount === 0) {
-                const availableSprints = [...new Set(window.tasks.filter(t => !t.isEscalation).map(t => t.sprint))];
-                sprintCount = availableSprints.length || 1;
+                const uniqueSprints = [...new Set(window.tasks.filter(t => !t.isEscalation).map(t => t.sprint))];
+                sprintCount = uniqueSprints.length || 1;
             }
-            
             const currentLimit = sprintCount * DEV_CAPACITY;
 
-            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div><p class="text-[10px] font-black text-purple-600 uppercase mt-1">Global Limit: ${currentLimit}H (${sprintCount} Sprints x 32H)</p></div>`;
-            
+            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div><p class="text-[10px] font-black text-purple-600 uppercase tracking-widest mt-1">Global Capacity: ${currentLimit}H (${sprintCount} Sprints x 32H)</p></div>`;
             const devHrs = data.reduce((acc, t) => { acc[t.assignee] = (acc[t.assignee] || 0) + t.hours; return acc; }, {});
             const labels = Object.keys(devHrs);
             if(charts.plan) charts.plan.destroy();
-            charts.plan = new Chart(document.getElementById('chartCapacity'), { type: 'bar', data: { labels, datasets: [{ label: 'Used', data: Object.values(devHrs), backgroundColor: '#7c3aed', borderRadius: 8, barThickness: 24 }, { label: 'Limit', data: labels.map(() => currentLimit), backgroundColor: '#f1f5f9', borderRadius: 8, barThickness: 24 }] }, options: { maintainAspectRatio: false, indexAxis: 'y', onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts.plan.data.labels[i[0].index], 'assignee'); }, plugins: { datalabels: { display: false }, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } } } });
+            charts.plan = new Chart(document.getElementById('chartCapacity'), { type: 'bar', data: { labels, datasets: [{ label: 'Used', data: Object.values(devHrs), backgroundColor: '#7c3aed', borderRadius: 8, barThickness: 24 }, { label: 'Limit', data: labels.map(() => currentLimit), backgroundColor: '#f1f5f9', borderRadius: 8, barThickness: 24 }] }, options: { maintainAspectRatio: false, indexAxis: 'y', onClick: (e, i) => { if(i.length > 0) openDrillDownPopup(charts.plan.data.labels[i[0].index], 'assignee', data); }, plugins: { datalabels: { display: false }, legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { grid: { display: false }, ticks: { font: { weight: '800', size: 10 } } } } } });
             document.getElementById('capacityList').innerHTML = labels.map(n => { const u = devHrs[n], p = Math.min((u/currentLimit)*100, 100); return `<div class="space-y-2 p-2 rounded-xl hover:bg-white transition-all"><div class="flex justify-between text-[11px] font-black uppercase tracking-widest text-xs"><span>${n}</span><span class="${u > currentLimit ? 'text-red-600 font-black' : 'text-slate-600'}">${u.toFixed(1)}h / ${currentLimit}h</span></div><div class="progress-bar"><div class="progress-fill ${u > currentLimit ? 'bg-red-500' : 'bg-purple-600'}" style="width: ${p}%"></div></div></div>`; }).join('');
         }
 
         function renderClientProgress(data) {
+            // DEDUPLICATE BY ID FIRST
             const uniqueById = Array.from(new Map(data.map(t => [t.id, t])).values());
             const clients = [...new Set(uniqueById.map(t => t.client))].sort();
             document.getElementById('view-client').innerHTML = clients.map(c => {
                 const ct = uniqueById.filter(t => t.client === c);
                 const done = ct.filter(t => t.isClosed).length;
                 const prog = ct.length > 0 ? Math.round((done / ct.length) * 100) : 0;
-                return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client')"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col text-xs"><span class="text-slate-900 text-sm font-bold">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right text-xs"><span class="text-slate-900 text-sm font-bold">${ct.length}</span><span>Volume</span></div></div></div>`;
+                return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client', window.currentFilteredTasks)"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length}</span><span>Volume</span></div></div></div>`;
             }).join('');
         }
 
-        function renderUnassigned(data) {
-            const f = data.filter(t => t.assignee === "Unassigned");
-            const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
+        function renderSupport(data) {
+            // FIX: IGNORE SPRINT FILTER BUT RESPECT OTHERS
+            const search = document.getElementById('mgmtSearch').value.toLowerCase();
+            const supportOnly = window.tasks.filter(t => 
+                t.isEscalation &&
+                (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && 
+                (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && 
+                (activeFilters.statuses.length === 0 || activeFilters.statuses.includes(t.status)) && 
+                (t.name.toLowerCase().includes(search))
+            );
+
+            const unique = Array.from(new Map(supportOnly.map(t => [t.id, t])).values());
             document.getElementById('unassignedCounter').innerText = `${unique.length} items`;
-            document.getElementById('unassignedTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-800 flex items-center gap-3 text-xs"><div>${t.name}</div> <span class="bg-red-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest alert-pulse shadow-sm uppercase">Support</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.client}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 font-black uppercase text-[9px] text-red-600 tracking-widest text-xs">${t.priority}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Allocation Optimized</td></tr>';
+            document.getElementById('unassignedTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-800 flex items-center gap-3 text-xs"><div>${t.name}</div> <span class="bg-red-600 text-white text-[8px] px-2 py-0.5 rounded-full font-black tracking-widest alert-pulse shadow-sm uppercase">Support</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-4 text-slate-400 font-bold text-xs">${t.qaDate}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">No active support items</td></tr>';
+            renderCharts(supportOnly, 'chartSupportStatus', 'chartSupportAssignee');
         }
 
         function renderNoDeadline(data) {
@@ -568,7 +599,7 @@
 
         function closeModal(id) { document.getElementById(id).classList.remove('show'); }
         function closeAllModals(e) { if(e.target.classList.contains('modal-overlay')) document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show')); }
-        window.onclick = (e) => { if(!e.target.closest('.filter-dropdown')) document.querySelectorAll('.filter-content').forEach(c => c.classList.remove('show')); };
+        window.addEventListener('click', () => document.querySelectorAll('.filter-content').forEach(c => c.classList.remove('show')));
         window.onload = () => fetchRealData(true);
     </script>
 </body>
