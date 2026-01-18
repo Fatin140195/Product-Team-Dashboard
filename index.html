@@ -81,7 +81,7 @@
 </head>
 <body class="antialiased h-screen flex flex-col">
 
-    <!-- DRILL-DOWN POPUP -->
+    <!-- DRILL-DOWN POPUP (COMPACT SIZE) -->
     <div id="taskListModal" class="modal-overlay" onclick="closeAllModals(event)">
         <div class="glass-card w-full max-w-4xl max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border-none" onclick="event.stopPropagation()">
             <div class="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
@@ -116,9 +116,9 @@
         </div>
     </div>
 
-    <!-- TASK DETAIL POPUP (Adjusted Size) -->
+    <!-- TASK DETAIL POPUP (COMPACT SIZE) -->
     <div id="taskDetailModal" class="modal-overlay" onclick="closeAllModals(event)">
-        <div class="glass-card w-full max-w-md max-h-[85vh] overflow-hidden shadow-2xl border-none flex flex-col" onclick="event.stopPropagation()">
+        <div class="glass-card w-full max-w-md max-h-[80vh] overflow-hidden shadow-2xl border-none flex flex-col" onclick="event.stopPropagation()">
             <div class="px-6 py-3 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
                 <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest">Requirement Detail</h2>
                 <button onclick="closeModal('taskDetailModal')" class="text-slate-400 hover:text-slate-600 p-1.5 transition-all duration-200">
@@ -233,7 +233,7 @@
         <section id="view-plan" class="tab-content hidden space-y-6 text-xs">
             <div id="planSummary" class="grid grid-cols-1 md:grid-cols-4 gap-6"></div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 glass-card p-6 h-[400px] relative flex flex-col items-center"><canvas id="chartCapacity"></canvas></div>
+                <div class="lg:col-span-2 glass-card p-6 h-[400px] relative flex flex-col"><canvas id="chartCapacity"></canvas></div>
                 <div class="glass-card p-6 space-y-5 overflow-y-auto max-h-[400px] bg-slate-50/20 shadow-inner" id="capacityList"></div>
             </div>
         </section>
@@ -283,7 +283,7 @@
     <script>
         Chart.register(ChartDataLabels);
         window.tasks = [];
-        window.currentFilteredTasks = [];
+        window.currentFilteredTasks = []; // Global filter context
         let charts = {};
         window.currentTab = 'mgmt';
         const DEV_CAPACITY = 32;
@@ -335,12 +335,14 @@
                         qaDateStr = !isNaN(d.getTime()) ? d.toLocaleDateString('en-GB') : "N/A";
                     }
 
-                    // Deploy Date logic (Mapped to t.deployDate and native Deployment Date popup label)
+                    // Deploy Date logic (Custom "Deploy Date" field)
                     const deployField = t.custom_fields?.find(f => f.name.toLowerCase().includes('deploy') && (f.type === 'date' || f.name.toLowerCase().includes('date')));
-                    let deployDateVal = t.due_date ? new Date(parseInt(t.due_date)) : null; // Native fallback
+                    let deployDateVal = null;
                     if (deployField?.value) {
                         const d = new Date(parseInt(deployField.value));
                         if (!isNaN(d.getTime())) deployDateVal = d;
+                    } else if (t.due_date) {
+                        deployDateVal = new Date(parseInt(t.due_date));
                     }
 
                     const rStatus = t.status?.status || "todo";
@@ -410,6 +412,11 @@
                     container.innerHTML = cfg.items.map(item => `<div class="filter-item" onclick="toggleSelection(event, '${cfg.key}', '${item.replace(/'/g, "\\'")}', '${cfg.label}', '${cfg.title}')"><input type="checkbox" ${activeFilters[cfg.key].includes(item) ? 'checked' : ''}><span class="truncate font-semibold">${item}</span></div>`).join('');
                 }
             });
+
+            const sLabel = document.getElementById('labelSprint');
+            if (activeFilters.sprints.length === 0) sLabel.innerText = "All Sprints";
+            else if (activeFilters.sprints.length === 1) sLabel.innerText = activeFilters.sprints[0];
+            else sLabel.innerText = `${activeFilters.sprints.length} Sprints`;
         }
 
         function toggleSelection(e, key, val, labelId, title) { 
@@ -417,16 +424,13 @@
             const idx = activeFilters[key].indexOf(val); 
             if (idx === -1) activeFilters[key].push(val); else activeFilters[key].splice(idx, 1); 
             document.getElementById(labelId).innerText = activeFilters[key].length === 0 ? `All ${title}` : (activeFilters[key].length === 1 ? activeFilters[key][0] : `${activeFilters[key].length} selected`); 
-            e.currentTarget.querySelector('input').checked = activeFilters[key].includes(val); 
+            populateFilters();
             renderView(window.currentTab); 
         }
 
         function resetFilters() { 
             activeFilters = { clients: [], assignees: [], statuses: [], sprints: [] }; 
-            ['labelClient', 'labelAssignee', 'labelSprint', 'labelStatus'].forEach(id => {
-                const label = id.replace('label', '');
-                document.getElementById(id).innerText = `All ${label}s`;
-            });
+            ['labelClient', 'labelAssignee', 'labelSprint', 'labelStatus'].forEach(id => document.getElementById(id).innerText = `All ${id.replace('label', '')}s`);
             populateFilters(); 
             renderView(window.currentTab); 
         }
@@ -442,16 +446,23 @@
 
         function renderView(view) {
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
-            window.currentFilteredTasks = window.tasks.filter(t => (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && (activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint)) && (activeFilters.statuses.length === 0 || activeFilters.statuses.includes(t.status)) && (t.name.toLowerCase().includes(search)));
+            
+            window.currentFilteredTasks = window.tasks.filter(t => 
+                (activeFilters.clients.length === 0 || activeFilters.clients.includes(t.client)) && 
+                (activeFilters.assignees.length === 0 || activeFilters.assignees.includes(t.assignee)) && 
+                (activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint)) && 
+                (activeFilters.statuses.length === 0 || activeFilters.statuses.includes(t.status)) && 
+                (t.name.toLowerCase().includes(search))
+            );
             
             if (view === 'mgmt') {
                 const display = window.currentFilteredTasks.filter(t => activeFilters.sprints.length === 0 || activeFilters.sprints.includes(t.sprint));
                 document.getElementById('taskCounter').innerText = `${display.length} items`;
-                document.getElementById('mgmtTable').innerHTML = display.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight">${t.name}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs">${t.assignee}</td></tr>`).join('');
+                document.getElementById('mgmtTable').innerHTML = display.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-3 font-bold text-slate-800 tracking-tight text-xs">${t.name}</td><td class="px-6 py-3 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-3 text-slate-400 font-bold uppercase text-[9px] tracking-widest">${t.sprint}</td><td class="px-6 py-3 text-slate-500 font-medium text-xs">${t.assignee}</td></tr>`).join('');
                 renderCharts(display, 'chartStatus', 'chartAssignee');
             } else if (view === 'plan') renderPlanning(window.currentFilteredTasks);
             else if (view === 'client') renderClientProgress(window.currentFilteredTasks);
-            else if (view === 'unassigned') renderSupport(window.currentFilteredTasks);
+            else if (view === 'unassigned') renderSupport();
             else if (view === 'no-deadline') renderNoDeadline(window.currentFilteredTasks);
             else if (view === 'backlog') renderBacklog(window.currentFilteredTasks);
         }
@@ -543,7 +554,6 @@
 
         function renderPlanning(data) {
             const total = data.reduce((s, t) => s + t.hours, 0);
-            
             let sprintCount = activeFilters.sprints.length;
             if (sprintCount === 0) {
                 const uniqueSprints = [...new Set(window.tasks.filter(t => !t.isEscalation).map(t => t.sprint))];
@@ -551,7 +561,7 @@
             }
             const currentLimit = sprintCount * DEV_CAPACITY;
 
-            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div><p class="text-[10px] font-black text-purple-600 uppercase tracking-widest mt-1">Global Limit: ${currentLimit}H (${sprintCount} Sprints x 32H)</p></div>`;
+            document.getElementById('planSummary').innerHTML = `<div class="glass-card p-6 flex flex-col items-center col-span-full bg-gradient-to-br from-white to-slate-50 border-none shadow-md"><h3 class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-2">Total Capacity Utilised</h3><div class="text-4xl font-black text-slate-900 tracking-tighter">${total.toFixed(1)}<span class="text-lg ml-2 text-slate-300">hrs</span></div><p class="text-[10px] font-black text-purple-600 uppercase tracking-widest mt-1">Global Capacity: ${currentLimit}H (${sprintCount} Sprints x 32H)</p></div>`;
             const devHrs = data.reduce((acc, t) => { acc[t.assignee] = (acc[t.assignee] || 0) + t.hours; return acc; }, {});
             const labels = Object.keys(devHrs);
             if(charts.plan) charts.plan.destroy();
@@ -566,13 +576,11 @@
                 const ct = uniqueById.filter(t => t.client === c);
                 const done = ct.filter(t => t.isClosed).length;
                 const prog = ct.length > 0 ? Math.round((done / ct.length) * 100) : 0;
-                // FIX: card click references the correct filtered task set
                 return `<div class="glass-card p-6 space-y-5 cursor-pointer flex flex-col justify-between" onclick="openDrillDownPopup('${c.replace(/'/g, "\\'")}', 'client', window.currentFilteredTasks)"><div><div class="flex justify-between items-start mb-2"><h4 class="font-black text-slate-800 tracking-tighter text-sm">${c}</h4><span class="text-xl font-black text-purple-600">${prog}%</span></div><div class="progress-bar"><div class="progress-fill ${prog === 100 ? 'bg-emerald-500' : 'bg-purple-600'}" style="width: ${prog}%"></div></div></div><div class="flex justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 pt-4"><div class="flex flex-col text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length - done}</span><span>Active</span></div><div class="flex flex-col text-right text-xs font-bold"><span class="text-slate-900 text-sm">${ct.length}</span><span>Volume</span></div></div></div>`;
             }).join('');
         }
 
-        function renderSupport(data) {
-            // IGNORE SPRINT FILTER BUT RESPECT OTHERS
+        function renderSupport() {
             const search = document.getElementById('mgmtSearch').value.toLowerCase();
             const supportOnly = window.tasks.filter(t => 
                 t.isEscalation &&
@@ -589,7 +597,7 @@
         }
 
         function renderNoDeadline(data) {
-            const f = data.filter(t => !t.dueDate);
+            const f = data.filter(t => !t.deployDate && !t.isClosed); // FIXED: Exclude Deployed/Closed
             const unique = Array.from(new Map(f.map(t => [t.id, t])).values());
             document.getElementById('noDeadlineCounter').innerText = `${unique.length} items`;
             document.getElementById('noDeadlineTable').innerHTML = unique.map(t => `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openTaskDetail('${t.id}')"><td class="px-6 py-4 font-black text-slate-900 tracking-tight text-xs">${t.name}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.sprint}</td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.client}</td><td class="px-6 py-4 text-xs"><span class="st-badge st-${t.statusKey}">${t.status}</span></td><td class="px-6 py-4 text-slate-400 font-bold uppercase text-[9px] tracking-widest text-xs">${t.allAssignees}</td></tr>`).join('') || '<tr><td class="p-12 text-center font-black text-slate-300 uppercase tracking-widest text-xs">Schedule Complete</td></tr>';
